@@ -367,7 +367,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="so_number_line_edit"/>
+         <widget class="QLineEdit" name="search_so_number_line_edit"/>
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="part_number_label">
@@ -377,12 +377,19 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QLineEdit" name="part_number_line_edit"/>
+         <widget class="QLineEdit" name="search_part_number_line_edit"/>
         </item>
        </layout>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QCheckBox" name="show_finished_parts_check_box">
+        <property name="text">
+         <string>Show Finished Parts</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="search_push_button">
         <property name="text">
          <string>Search</string>
         </property>
@@ -473,9 +480,9 @@
   <tabstop>is_cut_check_box</tabstop>
   <tabstop>is_spliced_check_box</tabstop>
   <tabstop>is_ready_for_build_check_box</tabstop>
-  <tabstop>so_number_line_edit</tabstop>
-  <tabstop>part_number_line_edit</tabstop>
-  <tabstop>pushButton</tabstop>
+  <tabstop>search_so_number_line_edit</tabstop>
+  <tabstop>search_part_number_line_edit</tabstop>
+  <tabstop>search_push_button</tabstop>
   <tabstop>tableWidget</tabstop>
  </tabstops>
  <resources/>

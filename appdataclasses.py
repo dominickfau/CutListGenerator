@@ -94,12 +94,22 @@ class CutItem:
         """Returns a cut list item that matches the given sales order number
             and product number and sale order line number."""
 
-        sql = "SELECT * FROM cutlist WHERE soNum = %s AND productNum = %s AND soLineItem = %s"
-        cursor.execute(sql, (so_number, product_number, line_num))
-        data = cursor.fetchone()
+        if line_num is None:
+            sql = "SELECT * FROM cutlist WHERE soNum = %s AND productNum = %s"
+            cursor.execute(sql, (so_number, product_number))
+        else:
+            sql = "SELECT * FROM cutlist WHERE soNum = %s AND productNum = %s AND soLineItem = %s"
+            cursor.execute(sql, (so_number, product_number, line_num))
+        data = cursor.fetchall()
+        
         if not data:
             return None
-        return cls.from_database_row(data)
+
+        cut_items = []
+        for row in data:
+            cut_items.append(cls.from_database_row(row))
+        
+        return cut_items
     
     @staticmethod
     def update_database(cut_item, cursor):

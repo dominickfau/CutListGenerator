@@ -5,6 +5,7 @@ from PyQt5.uic import loadUi
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QDialog, QApplication, QMessageBox
 from mainwindow import Ui_MainWindow
+from mysql.connector import errorcode as mysql_errorcode
 
 
 from settings import load_settings, save_settings
@@ -27,14 +28,56 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.fishbowl_connection = None
         self.cutlist_connection = None
-        self.connect_to_database()
+
+        connection_error = False
+        try:
+            self.connect_to_database()
+        except mysql.connector.Error as e:
+            connection_error = True
+            if e.errno == mysql_errorcode.ER_ACCESS_DENIED_ERROR:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Warning)
+                msg.setText("Could notconnect to the database. Please check your settings.")
+                msg.setDetailedText(str(e))
+                msg.setWindowTitle("Database Error")
+                msg.setStandardButtons(QMessageBox.Ok)
+                msg.exec()
+                return
     
         self.ui.tableWidget.setHorizontalHeaderLabels(["SO Due Date", "SO Number", "Line Number", "Customer Name", "Product Number", "Description", "Qty Left To Ship", "Qty Cut"])
-        self.load_table_data()
         self.ui.view_push_button.clicked.connect(self.load_item_data)
         self.ui.save_push_button.clicked.connect(self.save_item_data)
+        self.ui.search_push_button.clicked.connect(self.search_item_data)
         self.ui.actionGet_Current_SO_Data_From_Fishbowl.triggered.connect(self.get_current_fishbowl_data)
+
+        if not connection_error:
+            self.load_table_data()
+
+    def validate_search_criteria(self, search_so_number, search_part_number):
+        """Checkes if the search criteria is valid"""
+
+        if len(search_so_number) == 0 or len(search_part_number) == 0:
+            return False
+        return True
     
+    def search_item_data(self):
+        show_finished_parts = self.ui.show_finished_parts_check_box.isChecked()
+        search_part_number = self.ui.search_part_number_line_edit.text()
+        search_so_number = self.ui.search_so_number_line_edit.text()
+
+        if not self.validate_search_criteria(search_so_number, search_part_number):
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Please enter both SO number and part number to search for.")
+            msg.setWindowTitle("Search Error")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec()
+            return
+
+        # so_number, line_num, product_number
+        search_data = (search_so_number, None, search_part_number)
+        self.load_table_data(search_criteria=search_data)
+
     def get_current_fishbowl_data(self):
         rows_inserted, total_fishbowl_rows = self.get_current_so_data_from_fishbowl()
 
@@ -90,7 +133,7 @@ class MainWindow(QtWidgets.QMainWindow):
         total_fishbowl_rows = len(fishbowl_data)
 
         for row in fishbowl_data:
-            cut_item = appdataclasses.CutItem.find_by_sales_order_number_and_product_number(cut_item_cursor, row["soNum"], row['soLineItem'], row["productNum"])
+            cut_item = appdataclasses.CutItem.find_by_sales_order_number_and_product_number(cut_item_cursor, row["soNum"], row['soLineItem'], row["productNum"])[0]
             
             if cut_item:
                 continue
@@ -181,7 +224,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         
         cursor = self.get_cutlist_cursor()
-        cut_item = appdataclasses.CutItem.find_by_sales_order_number_and_product_number(cursor, so_num, line_num, product_num)
+        cut_item = appdataclasses.CutItem.find_by_sales_order_number_and_product_number(cursor, so_num, line_num, product_num)[0]
 
 
         if cut_item is None:
@@ -232,7 +275,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.selected_so_number_line_edit.setText(line_num)
 
         cursor = self.get_cutlist_cursor()
-        cut_item = appdataclasses.CutItem.find_by_sales_order_number_and_product_number(cursor, so_num, line_num, product_num)
+        cut_item = appdataclasses.CutItem.find_by_sales_order_number_and_product_number(cursor, so_num, line_num, product_num)[0]
 
         self.ui.added_to_cut_list_check_box.setChecked(cut_item.on_cut_list)
         self.ui.qty_cut_spin_box.setValue(0)
@@ -290,10 +333,17 @@ class MainWindow(QtWidgets.QMainWindow):
         # Loading Other data
         self.ui.is_ready_for_build_check_box.setChecked(cut_item.is_ready_for_build)
 
-    def load_table_data(self):
+    def load_table_data(self, search_criteria: tuple = None):
         self.clear_table_data()
         cursor = self.get_cutlist_cursor()
-        data = appdataclasses.CutItem.find_all_unfinished_items(cursor)
+
+        if search_criteria is None:
+            data = appdataclasses.CutItem.find_all_unfinished_items(cursor)
+        else:
+            data = appdataclasses.CutItem.find_by_sales_order_number_and_product_number(cursor, search_criteria[0], search_criteria[1], search_criteria[2])
+            if data is None:
+                return
+
         self.ui.tableWidget.setRowCount(len(data))
 
         for row_num, row in enumerate(data):
@@ -325,7 +375,6 @@ def main():
     app = QApplication(sys.argv)
     main_window = MainWindow()
     main_window.show()
-    main_window.get_current_fishbowl_data()
     app.exec_()
     try:
         main_window.fishbowl_connection.close()
