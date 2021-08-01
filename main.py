@@ -117,9 +117,9 @@ class MainWindow(QtWidgets.QMainWindow):
             if x != row_index:
                 continue
             
-            so_num = self.ui.tableWidget.item(x, 0).text()
-            line_num = self.ui.tableWidget.item(x, 1).text()
-            product_num = self.ui.tableWidget.item(x, 3).text()
+            so_num = self.ui.tableWidget.item(x, 1).text()
+            line_num = self.ui.tableWidget.item(x, 2).text()
+            product_num = self.ui.tableWidget.item(x, 4).text()
             return so_num, line_num, product_num
     
     def get_current_edit_row(self):
@@ -200,10 +200,12 @@ class MainWindow(QtWidgets.QMainWindow):
             cut_item.date_cut_start = form_data[4]
             cut_item.date_cut_end = form_data[5]
         
+        cut_item.is_terminated = form_data[6]
         if cut_item.is_terminated:
-            cut_item.date_termination_start = form_data[6]
-            cut_item.date_termination_end = form_data[7]
+            cut_item.date_termination_start = form_data[7]
+            cut_item.date_termination_end = form_data[8]
 
+        cut_item.is_spliced = form_data[9]
         if cut_item.is_spliced:
             cut_item.date_splice_start = form_data[10]
             cut_item.date_splice_end = form_data[11]
