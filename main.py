@@ -34,15 +34,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.connect_to_database()
         except mysql.connector.Error as e:
             connection_error = True
-            if e.errno == mysql_errorcode.ER_ACCESS_DENIED_ERROR:
-                msg = QMessageBox()
-                msg.setIcon(QMessageBox.Warning)
-                msg.setText("Could notconnect to the database. Please check your settings.")
-                msg.setDetailedText(str(e))
-                msg.setWindowTitle("Database Error")
-                msg.setStandardButtons(QMessageBox.Ok)
-                msg.exec()
-                return
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Could not connect to the database. Please check your settings.")
+            msg.setDetailedText(str(e))
+            msg.setWindowTitle("Database Error")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec()
+            return
     
         self.ui.tableWidget.setHorizontalHeaderLabels(["SO Due Date", "SO Number", "Line Number", "Customer Name", "Product Number", "Description", "Qty Left To Ship", "Qty Cut"])
         self.ui.view_push_button.clicked.connect(self.load_item_data)
