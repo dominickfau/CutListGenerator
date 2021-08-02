@@ -1,0 +1,6 @@
+__pycache__/
+build/
+output/
+dist/
+*.ini
+*Log.txt
