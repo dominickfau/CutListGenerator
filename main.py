@@ -12,6 +12,9 @@ from settings import load_settings, save_settings
 import appdataclasses
 
 SETTINGS_FILE_NAME = "settings.json"
+PROGRAM_NAME = "Cut List Generator"
+__version__ = "0.0.3"
+
 settings = load_settings(SETTINGS_FILE_NAME)
 
 # Exception for when no row is selected
@@ -25,6 +28,8 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        self.setWindowTitle(f"{PROGRAM_NAME} v{__version__}")
 
         self.fishbowl_connection = None
         self.cutlist_connection = None
@@ -132,7 +137,7 @@ class MainWindow(QtWidgets.QMainWindow):
         total_fishbowl_rows = len(fishbowl_data)
 
         for row in fishbowl_data:
-            cut_item = appdataclasses.CutItem.find_by_sales_order_number_and_product_number(cut_item_cursor, row["soNum"], row['soLineItem'], row["productNum"])[0]
+            cut_item = appdataclasses.CutItem.find_by_sales_order_number_and_product_number(cut_item_cursor, row["soNum"], row['soLineItem'], row["productNum"])
             
             if cut_item:
                 continue
@@ -340,8 +345,9 @@ class MainWindow(QtWidgets.QMainWindow):
             data = appdataclasses.CutItem.find_all_unfinished_items(cursor)
         else:
             data = appdataclasses.CutItem.find_by_sales_order_number_and_product_number(cursor, search_criteria[0], search_criteria[1], search_criteria[2])
-            if data is None:
-                return
+
+        if len(data) == 0:
+            return
 
         self.ui.tableWidget.setRowCount(len(data))
 
