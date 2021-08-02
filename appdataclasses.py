@@ -81,7 +81,7 @@ class CutItem:
         data = cursor.fetchall()
         
         if not data:
-            return None
+            return []
 
         cut_items = []
         for row in data:
@@ -103,7 +103,7 @@ class CutItem:
         data = cursor.fetchall()
         
         if not data:
-            return None
+            return []
 
         cut_items = []
         for row in data:

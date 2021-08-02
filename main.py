@@ -340,8 +340,9 @@ class MainWindow(QtWidgets.QMainWindow):
             data = appdataclasses.CutItem.find_all_unfinished_items(cursor)
         else:
             data = appdataclasses.CutItem.find_by_sales_order_number_and_product_number(cursor, search_criteria[0], search_criteria[1], search_criteria[2])
-            if data is None:
-                return
+
+        if len(data) == 0:
+            return
 
         self.ui.tableWidget.setRowCount(len(data))
 
