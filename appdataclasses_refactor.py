@@ -11,7 +11,7 @@ class Auditing:
         self.date_modified = datetime.datetime.now()
     
     def update_date_modified(self):
-        """Update the date_modified attribute."""
+        """Update the date_modified attribute to the current date/time."""
 
         self.date_modified = datetime.datetime.now()
 
@@ -26,7 +26,7 @@ class WireCutterOption:
     
     @classmethod
     def from_database(cls, db_entry: dict):
-        """Create a new wire cutter from a database wire cutter."""
+        """Creates a new wire cutter option from a database entry."""
 
         return cls(name=db_entry["name"], description=db_entry["description"], id=db_entry["id"])
 
@@ -83,7 +83,7 @@ class WireCutter(Auditing):
     
     @classmethod
     def from_database(cls, db_entry: dict, options: List[WireCutterOption] = None):
-        """Create a new wire cutter from a database entry."""
+        """Creates a new wire cutter from a database entry."""
 
         wire_cutter = cls(
             name=db_entry["name"],
@@ -99,7 +99,105 @@ class WireCutter(Auditing):
         wire_cutter.date_modified = db_entry["date_modified"]
 
         return wire_cutter
+
+
+@dataclass
+class Product:
+    """Represents a product."""
+
+    number: str
+    description: str
+    uom: str
+    unit_price_dollars: Optional[float] = None
+    kit_flag: bool = False
+    parent_kit_product_number: Optional[str] = None
+    id: Optional[int] = None
+
+    @classmethod
+    def from_database(cls, db_entry: dict):
+        """Creates a new product from a database entry."""
+
+        return cls(
+            number=db_entry["number"],
+            description=db_entry["description"],
+            uom=db_entry["uom"],
+            unit_price_dollars=db_entry["unit_price_dollars"],
+            kit_flag=db_entry["kit_flag"],
+            parent_kit_product_number=db_entry["parent_kit_product_number"],
+            id=db_entry["id"]
+        )
+
+
+
+@dataclass
+class CutJob(Auditing):
+    """Represents a cut job."""
+
+    customer_name: str
+    sales_order_number: str
+    due_date: datetime.datetime
+    product: Product
+    quantity_requseted: int
+    line_number: int
+    assigned_cutter: Optional[WireCutter] = None
+    on_cut_list: bool = False
+    quantity_cut: Optional[int] = None
+    date_cut_start: Optional[datetime.datetime] = None
+    date_cut_end: Optional[datetime.datetime] = None
+    date_termination_start: Optional[datetime.datetime] = None
+    date_termination_end: Optional[datetime.datetime] = None
+    date_splice_start: Optional[datetime.datetime] = None
+    date_splice_end: Optional[datetime.datetime] = None
+    is_cut: bool = False
+    is_spliced: bool = False
+    is_terminated: bool = False
+    is_ready_for_build: bool = False
+    id: Optional[int] = None
+
+    def __post_init__(self):
+        """Initialize the cut job after it's been created."""
+        
+        super().__init__()
     
+    def set_assigned_cutter(self, cutter: WireCutter):
+        """Set the assigned cutter for this cut job."""
+
+        self.update_date_modified()
+        self.assigned_cutter = cutter
+
+    @classmethod
+    def from_database(cls, db_entry: dict, product: Product, assigned_cutter: WireCutter = None):
+        """Creates a new cut job from a database entry."""
+
+        cut_job = cls(
+            customer_name=db_entry["customer_name"],
+            sales_order_number=db_entry["sales_order_number"],
+            due_date=db_entry["due_date"],
+            product=product,
+            quantity_requested=db_entry["quantity_requested"],
+            line_number=db_entry["line_number"],
+            on_cut_list=db_entry["on_cut_list"],
+            quantity_cut=db_entry["quantity_cut"],
+            date_cut_start=db_entry["date_cut_start"],
+            date_cut_end=db_entry["date_cut_end"],
+            date_termination_start=db_entry["date_termination_start"],
+            date_termination_end=db_entry["date_termination_end"],
+            date_splice_start=db_entry["date_splice_start"],
+            date_splice_end=db_entry["date_splice_end"],
+            is_cut=db_entry["is_cut"],
+            is_spliced=db_entry["is_spliced"],
+            is_terminated=db_entry["is_terminated"],
+            is_ready_for_build=db_entry["is_ready_for_build"],
+            id=db_entry["id"]
+        )
+
+        if assigned_cutter != None:
+            cut_job.set_assigned_cutter(assigned_cutter)
+
+        cut_job.date_created = db_entry["date_created"]
+        cut_job.date_modified = db_entry["date_modified"]
+
+        return cut_job
 
 
 
