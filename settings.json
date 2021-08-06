@@ -16,7 +16,8 @@
             "port": 3306,
             "user": "cutlist",
             "password": "Letmein2021",
-            "database": "cutlistgenerator"
+            "database": "cutlistgenerator",
+            "autocommit": true
         }
     }
 }
