@@ -3,6 +3,15 @@ CREATE DATABASE `cutlistgenerator` /*!40100 DEFAULT CHARACTER SET utf8 */;
 USE `cutlistgenerator`;
 DROP TABLE IF EXISTS `cutlist`;
 
+CREATE TABLE `databaseversion` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `dateUpdated` datetime(6) DEFAULT NULL,
+  `version` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `UKd2crfgsuo4c4raueftf2a3v0l` (`version`),
+  KEY `databaseVersionVersionIdx` (`version`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE `product` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `number` varchar(45) NOT NULL,
