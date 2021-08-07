@@ -48,6 +48,11 @@ class Database(ABC):
         """Disconnect from database."""
         pass
 
+    @abstractmethod
+    def get_current_version(self):
+        """Get the current version of the database."""
+        pass
+
 
 class CutListDatabase(Database):
     """Base class for CutList Databases"""
@@ -221,6 +226,11 @@ class MySQLDatabaseConnection(CutListDatabase):
         if self.connection:
             self.connection.close()
             self.connection = None
+
+    def get_current_version(self) -> dict:
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM database_version ORDER BY id DESC LIMIT 1")
+        return cursor.fetchone()
     
     def get_product_by_number(self, number: str) -> dict:
         cursor = self.__get_cursor()
@@ -294,7 +304,6 @@ class MySQLDatabaseConnection(CutListDatabase):
             return None
         return wire_cutter_option
     
-
     def get_wire_cutter_option_by_name(self, wire_cutter_option_name: int) -> dict:
         values = {
             'name': wire_cutter_option_name
@@ -625,6 +634,11 @@ class FishbowlDatabase(Database):
     
     def create(self):
         raise NotImplementedError("This method is not implemented. A Fishbowl database must be created when installing Fishbowl.")
+    
+    def get_current_version(self) -> dict:
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM databaseversion ORDER BY id DESC LIMIT 1")
+        return cursor.fetchone()
 
     def __get_cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None, dictionary=True, named_tuple=None):
         """Get a cursor to the database. Defaults to a dictionary cursor."""

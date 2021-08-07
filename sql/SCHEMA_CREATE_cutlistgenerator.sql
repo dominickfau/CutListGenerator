@@ -3,9 +3,9 @@ CREATE DATABASE `cutlistgenerator` /*!40100 DEFAULT CHARACTER SET utf8 */;
 USE `cutlistgenerator`;
 DROP TABLE IF EXISTS `cutlist`;
 
-CREATE TABLE `databaseversion` (
+CREATE TABLE `database_version` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `dateUpdated` datetime(6) DEFAULT NULL,
+  `date_updated` datetime(6) DEFAULT NULL,
   `version` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UKd2crfgsuo4c4raueftf2a3v0l` (`version`),
