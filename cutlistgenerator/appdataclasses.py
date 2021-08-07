@@ -14,9 +14,9 @@ class Product:
     number: str
     description: str
     uom: str
-    unit_price_dollars: Optional[float] = None
+    unit_price_dollars: float = None
     kit_flag: bool = False
-    parent_kit_product: Optional['Product'] = None
+    parent_kit_product: 'Product' = None
     id: int = None
 
     def __post_init__(self):
@@ -29,12 +29,6 @@ class Product:
             self.unit_price_dollars = 0.0
 
     @classmethod
-    def from_dict(cls, database_connection: CutListDatabase, product_dict: dict):
-        """Creates a product from a dictionary."""
-
-        return cls(database_connection, **product_dict)
-
-    @classmethod
     def from_number(cls, database_connection: CutListDatabase, number: str) -> 'Product':
         """Returns a product from the database by its number. Returns None if not found."""
 
@@ -42,6 +36,20 @@ class Product:
         if not data:
             return None
 
+        # TODO: Come up with a way to use this parent_kit_product_number.
+        parent_kit_product_number = data.pop('parent_kit_product_number', None)
+
+        return cls(database_connection, **data)
+    
+    @classmethod
+    def from_id(cls, database_connection: CutListDatabase, id: int) -> 'Product':
+        """Returns a product from the database by its ID. Returns None if not found."""
+
+        data = database_connection.get_product_by_id(id)
+        if not data:
+            return None
+
+        # TODO: Come up with a way to use this parent_kit_product_number.
         parent_kit_product_number = data.pop('parent_kit_product_number', None)
 
         return cls(database_connection, **data)
@@ -64,14 +72,8 @@ class WireCutterOption:
 
     database_connection: CutListDatabase
     name: str
-    description: Optional[str] = None
+    description: str = None
     id: int = None
-    
-    @classmethod
-    def from_dict(cls, database_connection: CutListDatabase, wire_cutter_option_dict: dict):
-        """Creates a wire cutter option from a dictionary."""
-
-        return cls(database_connection, **wire_cutter_option_dict)
 
     @classmethod
     def from_number(cls, database_connection: CutListDatabase, name: str) -> 'WireCutterOption':
@@ -82,7 +84,7 @@ class WireCutterOption:
     def save(self):
         """Saves the wire cutter option to the database."""
 
-        self.id = self.database_connection.save_wire_cutter_option(self.__dict__)
+        self.id = self.database_connection.save_wire_cutter_option(self)
 
 
 @dataclass
@@ -92,9 +94,9 @@ class WireCutter:
     database_connection: CutListDatabase
     name: str
     max_wire_gauge_awg: int
-    processing_speed_feet_per_minute: Optional[int] = None
-    details: Optional[str] = None
-    options: Optional[List[WireCutterOption]] = None
+    processing_speed_feet_per_minute: int = None
+    details: str = None
+    options: List[WireCutterOption] = None
     id: int = None
 
     def __post_init__(self):
@@ -102,12 +104,6 @@ class WireCutter:
 
         if self.options is None:
             self.options = []
-
-    @classmethod
-    def from_dict(cls, database_connection: CutListDatabase, wire_cutter_dict: dict):
-        """Creates a wire cutter from a dictionary."""
-        
-        return cls(database_connection, **wire_cutter_dict)
 
     @classmethod
     def from_name(cls, database_connection: CutListDatabase, name: str) -> 'WireCutter':
@@ -149,7 +145,7 @@ class WireCutter:
         
         for option in self.options:
             option.save()
-        self.id = self.database_connection.save_wire_cutter(self.__dict__)
+        self.id = self.database_connection.save_wire_cutter(self)
 
 
 @dataclass
@@ -165,17 +161,6 @@ class SalesOrderItem:
     line_number: int
     id: int = None
     sales_order_id: int = None
-
-    @classmethod
-    def from_dict(cls, database_connection: CutListDatabase, sales_order_item_dict: dict) -> 'SalesOrderItem':
-        """Creates a sales order item from a dictionary."""
-        cls(database_connection, **sales_order_item_dict)
-
-        product = Product.from_number()
-
-        sales_order_item = cls(database_connection, )
-        
-        return sales_order_item
     
     @classmethod
     def find_by_product_number_and_line_number(cls, database_connection: CutListDatabase, product_number, line_number) -> 'SalesOrderItem':
@@ -236,12 +221,6 @@ class SalesOrder:
             self.order_items = []
 
     @classmethod
-    def from_dict(cls, database_connection: CutListDatabase, sales_order_dict: dict) -> 'SalesOrder':
-        """Creates a sales order from a dictionary. This does not include the order items."""
-        
-        return cls(database_connection, **sales_order_dict)
-
-    @classmethod
     def find_by_number(cls, database_connection: CutListDatabase, number: str) -> 'SalesOrder':
         """Returns a sales order from the database by its number. Along with the order items.
             Returns None if the sales order doesn't exist."""
@@ -254,7 +233,20 @@ class SalesOrder:
 
         # Add the order items
         for item in database_connection.get_sales_order_items_by_sales_order_id(sales_order.id):
-            sales_order.add_item(SalesOrderItem.from_dict(database_connection, item))
+            # id, sales_order_id, qty_to_fulfill, line_number, qty_picked, qty_fulfilled, due_date
+
+            product = Product.from_id(database_connection, id=item['product_id'])
+
+            order_item = SalesOrderItem(database_connection,
+                                        product,
+                                        due_date=item['due_date'],
+                                        qty_to_fulfill=item['qty_to_fulfill'],
+                                        qty_picked=item['qty_picked'],
+                                        qty_fulfilled=item['qty_fulfilled'],
+                                        line_number=item['line_number'],
+                                        sales_order_id=item['sales_order_id'])
+
+            sales_order.add_item(order_item)
 
         return sales_order
 
@@ -294,26 +286,20 @@ class CutJob:
 
     database_connection: CutListDatabase
     product: Product
-    related_sales_order_item: Optional[SalesOrderItem] = None
+    related_sales_order_item: SalesOrderItem = None
     assigned_cutter: WireCutter = None
-    quantity_cut: Optional[int] = None
-    date_cut_start: Optional[datetime.datetime] = None
-    date_cut_end: Optional[datetime.datetime] = None
-    date_termination_start: Optional[datetime.datetime] = None
-    date_termination_end: Optional[datetime.datetime] = None
-    date_splice_start: Optional[datetime.datetime] = None
-    date_splice_end: Optional[datetime.datetime] = None
+    quantity_cut: int = None
+    date_cut_start: datetime.datetime = None
+    date_cut_end: datetime.datetime = None
+    date_termination_start: datetime.datetime = None
+    date_termination_end: datetime.datetime = None
+    date_splice_start: datetime.datetime = None
+    date_splice_end: datetime.datetime = None
     is_cut: bool = False
     is_spliced: bool = False
     is_terminated: bool = False
     is_ready_for_build: bool = False
     id: int = None
-
-    @classmethod
-    def from_dict(cls, database_connection: CutListDatabase, cut_job_dict: dict) -> 'CutJob':
-        """Creates a cut job from a dictionary."""
-        
-        return cls(database_connection, **cut_job_dict)
 
     def set_assigned_cutter(self, cutter: WireCutter):
         """Set the assigned cutter for this cut job."""
@@ -328,7 +314,7 @@ class CutJob:
     def save(self):
         """Saves the cut job to the database."""
 
-        self.id = self.database_connection.save_cut_job(self.__dict__)
+        self.id = self.database_connection.save_cut_job(self)
         if self.assigned_cutter != None:
             self.assigned_cutter.save()
         if self.related_sales_order_item != None:

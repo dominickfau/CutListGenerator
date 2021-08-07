@@ -1,6 +1,6 @@
-DROP DATABASE IF EXISTS `cutlistgenerato_TESTr`;
-CREATE DATABASE `cutlistgenerator_TEST` /*!40100 DEFAULT CHARACTER SET utf8 */;
-USE `cutlistgenerator_TEST`;
+DROP DATABASE IF EXISTS `cutlistgenerator_test`;
+CREATE DATABASE `cutlistgenerator_test` /*!40100 DEFAULT CHARACTER SET utf8 */;
+USE `cutlistgenerator_test`;
 
 CREATE TABLE `database_version` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -60,7 +60,6 @@ CREATE TABLE `wire_cutter_to_wire_cutter_option` (
 CREATE TABLE `sales_order` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `customer_name` varchar(255) NOT NULL,
-  `due_date` datetime(6) NOT NULL,
   `number` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `number_UNIQUE` (`number`),
@@ -71,8 +70,11 @@ CREATE TABLE `sales_order_item` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `sales_order_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
-  `quantity_requseted` decimal(28,9) NOT NULL,
+  `qty_to_fulfill` decimal(28,9) NOT NULL,
+  `qty_fulfilled` decimal(28,9) NOT NULL,
+  `qty_picked` decimal(28,9) NOT NULL,
   `line_number` int(11) NOT NULL,
+  `due_date` datetime(6) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `FK_buiajikfbgiuadfrgkijsfgbkj_idx` (`sales_order_id`),
   KEY `FK_buiwejfgbuiwefjhbghjarg_idx` (`product_id`),

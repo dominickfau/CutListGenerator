@@ -64,17 +64,22 @@ class CutListDatabase(Database):
         pass
 
     @abstractmethod
+    def get_product_by_id(self, id: int) -> dict:
+        """Get product by ID. Returns None if not found."""
+        pass
+
+    @abstractmethod
     def get_all_products(self) -> List[dict]:
         """Get all products. Returns empty list if not found."""
         pass
 
     @abstractmethod
-    def save_product(self, product: dict) -> int:
+    def save_product(self, product) -> int:
         """Save product to database. Returns id of saved product."""
         pass
     
     @abstractmethod
-    def delete_product(self, product: dict) -> None:
+    def delete_product(self, product) -> None:
         """Delete product from database."""
         pass
     
@@ -90,12 +95,12 @@ class CutListDatabase(Database):
         pass
     
     @abstractmethod
-    def save_wire_cutter_option(self, wire_cutter_option: dict) -> int:
+    def save_wire_cutter_option(self, wire_cutter_option) -> int:
         """Save wire cutter option. Returns None if not found. Returns id of saved wire cutter option."""
         pass
 
     @abstractmethod
-    def delete_wire_cutter_option(self, wire_cutter_option: dict) -> None:
+    def delete_wire_cutter_option(self, wire_cutter_option) -> None:
         """Delete wire cutter option."""
         pass
 
@@ -111,12 +116,12 @@ class CutListDatabase(Database):
         pass
     
     @abstractmethod
-    def save_wire_cutter(self, wire_cutter: dict) -> int:
+    def save_wire_cutter(self, wire_cutter) -> int:
         """Save wire cutter. Returns id of saved wire cutter."""
         pass
 
     @abstractmethod
-    def delete_wire_cutter(self, wire_cutter: dict) -> None:
+    def delete_wire_cutter(self, wire_cutter) -> None:
         """Delete wire cutter."""
         pass
 
@@ -142,12 +147,12 @@ class CutListDatabase(Database):
         pass
 
     @abstractmethod
-    def save_sales_order(self, sales_order: dict) -> int:
+    def save_sales_order(self, sales_order) -> int:
         """Save sales order. Returns id of saved sales order."""
         pass
 
     @abstractmethod
-    def delete_sales_order(self, sales_order: dict) -> None:
+    def delete_sales_order(self, sales_order) -> None:
         """Delete sales order."""
         pass
 
@@ -168,12 +173,12 @@ class CutListDatabase(Database):
         pass
 
     @abstractmethod
-    def save_sales_order_item(self, sales_order_item: dict) -> int:
+    def save_sales_order_item(self, sales_order_item) -> int:
         """Save sales order item. Returns id of saved sales order item."""
         pass
 
     @abstractmethod
-    def delete_sales_order_item(self, sales_order_item: dict) -> None:
+    def delete_sales_order_item(self, sales_order_item) -> None:
         """Delete sales order item."""
         pass
 
@@ -199,12 +204,12 @@ class CutListDatabase(Database):
         pass
     
     @abstractmethod
-    def save_cut_job(self, cut_job: dict) -> int:
+    def save_cut_job(self, cut_job) -> int:
         """Save cut job. Returns id of saved cut job."""
         pass
 
     @abstractmethod
-    def delete_cut_job(self, cut_job: dict) -> None:
+    def delete_cut_job(self, cut_job) -> None:
         """Delete cut job."""
         pass
 
@@ -239,6 +244,19 @@ class MySQLDatabaseConnection(CutListDatabase):
         }
 
         cursor.execute("SELECT * FROM product WHERE number = %(number)s", values)
+        product = cursor.fetchone()
+        cursor.close()
+        if not product:
+            return None
+        return product
+    
+    def get_product_by_id(self, id: int) -> dict:
+        cursor = self.__get_cursor()
+        values = {
+            'id': id
+        }
+
+        cursor.execute("SELECT * FROM product WHERE id = %(id)s", values)
         product = cursor.fetchone()
         cursor.close()
         if not product:
@@ -338,15 +356,15 @@ class MySQLDatabaseConnection(CutListDatabase):
             return []
         return wire_cutter_options
     
-    def save_wire_cutter_option(self, wire_cutter_option: dict) -> int:
+    def save_wire_cutter_option(self, wire_cutter_option) -> int:
         values = {
-            'name': wire_cutter_option['name'],
-            'description': wire_cutter_option['description'],
-            'id': wire_cutter_option['id']
+            'name': wire_cutter_option.name,
+            'description': wire_cutter_option.description,
+            'id': wire_cutter_option.id
         }
 
         cursor = self.__get_cursor()
-        if wire_cutter_option["id"] is None:
+        if wire_cutter_option.id is None:
             cursor.execute("""INSERT INTO wire_cutter_option (name, descrition)
                                 VALUES(%(name)s, %(description)s)""", values)
             wire_cutter_option_id = cursor.lastrowid
@@ -358,9 +376,9 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.close()
         return wire_cutter_option_id
     
-    def delete_wire_cutter_option(self, wire_cutter_option: dict) -> None:
+    def delete_wire_cutter_option(self, wire_cutter_option) -> None:
         values = {
-            'id': wire_cutter_option["id"]
+            'id': wire_cutter_option.id
         }
 
         cursor = self.__get_cursor()
@@ -391,18 +409,18 @@ class MySQLDatabaseConnection(CutListDatabase):
             return []
         return wire_cutters
 
-    def save_wire_cutter(self, wire_cutter: dict) -> int:
+    def save_wire_cutter(self, wire_cutter) -> int:
         values = {
-            'name': wire_cutter['name'],
-            'max_wire_gauge_awg': wire_cutter['max_wire_gauge_awg'],
-            'processing_speed_feet_per_minute': wire_cutter['processing_speed_feet_per_minute'],
-            'details': wire_cutter['details'],
-            'id': wire_cutter['id']
+            'name': wire_cutter.name,
+            'max_wire_gauge_awg': wire_cutter.max_wire_gauge_awg,
+            'processing_speed_feet_per_minute': wire_cutter.processing_speed_feet_per_minute,
+            'details': wire_cutter.details,
+            'id': wire_cutter.id
         }
         cursor = self.__get_cursor()
 
         # Save the wire_cutter
-        if wire_cutter["id"] is None:
+        if wire_cutter.id is None:
             cursor.execute("""INSERT INTO wire_cutter (name, max_wire_gauge_awg, processing_speed_feet_per_minute, details)
                                 VALUES(%(name)s, %(max_wire_gauge_awg)s, %(processing_speed_feet_per_minute)s, %(details)s)""", values)
             wire_cutter_id = cursor.lastrowid
@@ -412,10 +430,10 @@ class MySQLDatabaseConnection(CutListDatabase):
             wire_cutter_id = values["id"]
         
         # Save the wire_cutter_to_wire_cutter_option relationship
-        for wire_cutter_option in wire_cutter["wire_cutter_options"]:
+        for wire_cutter_option in wire_cutter.options:
             values = {
                 'wire_cutter_id': wire_cutter_id,
-                'wire_cutter_option_id': wire_cutter_option["id"]
+                'wire_cutter_option_id': wire_cutter_option.id
             }
 
             # Query to see if the wire_cutter_to_wire_cutter_option relationship already exists
@@ -439,9 +457,9 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.close()
         return wire_cutter_id
     
-    def delete_wire_cutter(self, wire_cutter: dict) -> None:
+    def delete_wire_cutter(self, wire_cutter) -> None:
         values = {
-            'id': wire_cutter["id"]
+            'id': wire_cutter.id
         }
 
         cursor = self.__get_cursor()
@@ -535,7 +553,6 @@ class MySQLDatabaseConnection(CutListDatabase):
         return sales_order_items
     
     def save_sales_order_item(self, sales_order_item) -> int:
-        # TODO: Convert all from dict.
         values = {
             'sales_order_id': sales_order_item.sales_order_id,
             'due_date': sales_order_item.due_date,
@@ -556,10 +573,11 @@ class MySQLDatabaseConnection(CutListDatabase):
             cursor.execute("""
                 UPDATE sales_order_item
                 SET sales_order_id = %(sales_order_id)s,
-                name = %(name)s,
                 due_date = %(due_date)s,
                 product_id = %(product_id)s,
-                quantity_requseted = %(quantity_requseted)s,
+                qty_to_fulfill = %(qty_to_fulfill)s,
+                qty_fulfilled =  %(qty_fulfilled)s,
+                qty_picked = %(qty_picked)s,
                 line_number = %(line_number)s
                 WHERE id = %(id)s""", values)
             sales_order_item_id = values["id"]
@@ -567,9 +585,9 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.close()
         return sales_order_item_id
         
-    def delete_sales_order_item(self, sales_order_item: dict) -> None:
+    def delete_sales_order_item(self, sales_order_item) -> None:
         values = {
-            'id': sales_order_item["id"]
+            'id': sales_order_item.id
         }
 
         cursor = self.__get_cursor()

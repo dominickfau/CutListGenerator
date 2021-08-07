@@ -31,3 +31,9 @@ JOIN bomitemtype ON bomitem.typeId = bomitemtype.id
 JOIN part ON bomitem.partId = part.id
 WHERE bom.num = "5000107"
 AND bomitemtype.name = "Raw Good";
+
+SELECT sales_order.number, sales_order_item.due_date, sales_order.customer_name, product.number, product.description, sales_order_item.qty_to_fulfill,
+	sales_order_item.qty_picked, sales_order_item.qty_fulfilled
+FROM sales_order
+JOIN sales_order_item ON sales_order.id = sales_order_item.sales_order_id
+JOIN product ON sales_order_item.product_id = product.id;
