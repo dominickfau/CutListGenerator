@@ -174,7 +174,7 @@ class SalesOrderItem:
     
     @classmethod
     def from_sales_order_id(cls, database_connection: CutListDatabase, sales_order_id: int) -> 'SalesOrderItem':
-        """Returns a sales order item from the database by its sales order ID.
+        """Returns all sales order items from the database by its sales order ID.
             Returns a list of all the items in the sales order, or an empty list if the sales order doesn't exist."""
         to_return = []
 
@@ -218,6 +218,23 @@ class SalesOrder:
         
         return cls(database_connection, **sales_order_dict)
 
+    @classmethod
+    def find_by_number(cls, database_connection: CutListDatabase, number: str) -> 'SalesOrder':
+        """Returns a sales order from the database by its number. Along with the order items.
+            Returns None if the sales order doesn't exist."""
+
+        data = database_connection.get_sales_order_by_number(number)
+        if not data:
+            return None
+
+        sales_order = cls(database_connection, **data)
+
+        # Add the order items
+        for item in database_connection.get_sales_order_items_by_sales_order_id(sales_order.id):
+            sales_order.add_item(SalesOrderItem.from_dict(database_connection, item))
+
+        return sales_order
+
     def add_item(self, item: SalesOrderItem):
         """Add a sales order item to this sales order."""
         
@@ -229,7 +246,7 @@ class SalesOrder:
         for item in self.order_items:
             item.save()
         self.id = self.database_connection.save_sales_order(self.__dict__)
-        
+
 
 @dataclass
 class CutJob:

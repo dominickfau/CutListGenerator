@@ -1,3 +1,4 @@
+from cutlistgenerator.appdataclasses import SalesOrder
 import mysql.connector
 # import datetime
 # import decimal
@@ -650,7 +651,7 @@ class FishbowlDatabase(Database):
     def get_all_open_sales_order_items(self) -> List[dict]:
         cursor = self.__get_cursor()
         cursor.execute("""
-                SELECT so.num AS soNum,
+                SELECT so.num AS so_number,
                     CASE 
                         WHEN customer.name = "Brunswick Boat Group, Fort Wayne Operatio" THEN "Brunswick"
                         WHEN customer.name = "GODFREY MARINE-HURRICANE" THEN "Godfrey"
@@ -686,7 +687,7 @@ class FishbowlDatabase(Database):
     
     def get_kit_items_for_product_number(self, product_number: str) -> List[dict]:
         """Finds all the kit items for a product number. Returns a list of dictionaries
-            with the product number, kit_part_number, and kit_part_qty as keys."""
+            with the child_part_number, and child_part_qty as keys."""
 
         kit_items = []
 
@@ -698,8 +699,8 @@ class FishbowlDatabase(Database):
         cursor.execute("""
             SELECT 
                 -- finishedpart.num AS product_number,
-                rawpart.num AS kit_part_number,
-                bomitem.quantity AS kit_part_quantity
+                rawpart.num AS child_part_number,
+                bomitem.quantity AS child_part_quantity
             FROM product
             JOIN part finishedpart ON product.partId = finishedpart.id
             JOIN bomitem ON finishedpart.defaultBomId = bomitem.bomId
