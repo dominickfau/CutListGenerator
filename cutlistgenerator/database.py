@@ -1,4 +1,3 @@
-from cutlistgenerator.appdataclasses import SalesOrder
 import mysql.connector
 # import datetime
 # import decimal
@@ -25,7 +24,7 @@ FISHBOWL_TO_CUT_LIST_DATABASE_MAPPING = {
 #                 return obj.__dict__
 
 
-class Database(ABC):
+class Database:
     """Base class for Databases"""
 
     def __init__(self, connection_args: dict):
@@ -255,20 +254,24 @@ class MySQLDatabaseConnection(CutListDatabase):
             return []
         return products
     
-    def save_product(self, product: dict) -> int:
+    def save_product(self, product) -> int:
         values = {
-            'number': product['number'],
-            'description': product['description'],
-            'uom': product['uom'],
-            'unit_price_dollars': product['unit_price_dollars'],
-            'kit_flag': product['kit_flag'],
-            'parent_kit_product_number': product['parent_kit_product_number'],
-            'id': product['id']
+            'number': product.number,
+            'description': product.description,
+            'uom': product.uom,
+            'unit_price_dollars': product.unit_price_dollars,
+            'kit_flag': product.kit_flag,
+            'id': product.id
         }
+
+        if not product.parent_kit_product:
+            values['parent_kit_product_number'] = None
+        else:
+            values['parent_kit_product_number'] = product.parent_kit_product.number
 
         cursor = self.__get_cursor()
 
-        if product["id"] is None:
+        if product.id is None:
             cursor.execute("""INSERT INTO product (number, description, uom, unit_price_dollars, kit_flag, parent_kit_product_number)
                                 VALUES(%(number)s, %(description)s, %(uom)s, %(unit_price_dollars)s, %(kit_flag)s, %(parent_kit_product_number)s)""", values)
             product_id = cursor.lastrowid
@@ -281,9 +284,9 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.close()
         return product_id
     
-    def delete_product(self, product: dict) -> None:
+    def delete_product(self, product) -> None:
         values = {
-            'id': product["id"]
+            'id': product.id
         }
 
         cursor = self.__get_cursor()
@@ -453,6 +456,7 @@ class MySQLDatabaseConnection(CutListDatabase):
     
     # Sales Order Item methods
     def get_sales_order_items_by_sales_order_id(self, sales_order_id: int) -> List[dict]:
+        # TODO: Change query.
         values = {
             'sales_order_id': sales_order_id
         }
@@ -478,8 +482,42 @@ class MySQLDatabaseConnection(CutListDatabase):
         if not sales_order_item:
             return None
         return sales_order_item
+
+    def get_sales_order_item_by_product_number_and_line_number(self, product_number: str, line_number: int) -> List[dict]:
+        # TODO: Change query.
+        values = {
+            'product_number': product_number,
+            'line_number': line_number
+        }
+
+        cursor = self.__get_cursor()
+        cursor.execute("""
+            SELECT sales_order_item.id AS so_item_id,
+                sales_order_item.so_id AS so_id,
+                sales_order_item.due_date AS due_date,
+                sales_order_item.qty_to_fulfill AS qty_to_fulfill,
+                sales_order_item.qty_picked AS qty_picked,
+                sales_order_item.qty_fulfilled AS qty_fulfilled,
+                product.id AS product_id,
+                product.number AS product_number,
+                product.description AS product_description,
+                product.uom AS uom,
+                product.unit_price_dollars AS unit_price_dollars,
+                product.kit_flag AS kit_flag,
+                product.parent_kit_product_number AS parent_kit_product_number
+
+            FROM sales_order_item
+            JOIN product ON sales_order_item.product_id = product.id
+            WHERE product.number = %(product_number)s
+            AND sales_order_item.line_number = %(line_number)s""", values)
+        sales_order_items = cursor.fetchall()
+        cursor.close()
+        if not sales_order_items:
+            return []
+        return sales_order_items
     
     def get_sales_order_items_by_sales_order_number(self, number: str) -> List[dict]:
+        # TODO: Change query.
         values = {
             'number': number
         }
@@ -496,21 +534,23 @@ class MySQLDatabaseConnection(CutListDatabase):
             return []
         return sales_order_items
     
-    def save_sales_order_item(self, sales_order_item: dict) -> int:
+    def save_sales_order_item(self, sales_order_item) -> int:
+        # TODO: Convert all from dict.
         values = {
-            'sales_order_id': sales_order_item['sales_order_id'],
-            'due_date': sales_order_item['due_date'],
-            'name': sales_order_item['name'],
-            'product_id': sales_order_item['product']['id'],
-            'quantity_requseted': sales_order_item['quantity_requseted'],
-            'line_number': sales_order_item['line_number'],
-            'id': sales_order_item['id']
+            'sales_order_id': sales_order_item.sales_order_id,
+            'due_date': sales_order_item.due_date,
+            'product_id': sales_order_item.product.id,
+            'qty_to_fulfill': sales_order_item.qty_to_fulfill,
+            'qty_fulfilled': sales_order_item.qty_fulfilled,
+            'qty_picked': sales_order_item.qty_picked,
+            'line_number': sales_order_item.line_number,
+            'id': sales_order_item.id
         }
 
         cursor = self.__get_cursor()
-        if sales_order_item["id"] is None:
-            cursor.execute("""INSERT INTO sales_order_item (sales_order_id, name, due_date, product_id, quantity_requseted, line_number)
-                                VALUES(%(sales_order_id)s, %(name)s, %(due_date)s, %(product_id)s, %(quantity_requseted)s, %(line_number)s)""", values)
+        if sales_order_item.id is None:
+            cursor.execute("""INSERT INTO sales_order_item (sales_order_id, due_date, product_id, qty_to_fulfill, qty_fulfilled, qty_picked, line_number)
+                                VALUES(%(sales_order_id)s, %(due_date)s, %(product_id)s, %(qty_to_fulfill)s, %(qty_fulfilled)s, %(qty_picked)s, %(line_number)s)""", values)
             sales_order_item_id = cursor.lastrowid
         else:
             cursor.execute("""
@@ -565,30 +605,29 @@ class MySQLDatabaseConnection(CutListDatabase):
         all_orders = self.get_all_sales_orders()
         return [order for order in all_orders if order['customer_name'] == customer_name]
     
-    def save_sales_order(self, sales_order: dict) -> int:
+    def save_sales_order(self, sales_order) -> int:
         values = {
-            'number': sales_order['number'],
-            'customer_name': sales_order['customer_name'],
-            'details': sales_order['details'],
-            'id': sales_order['id']
+            'number': sales_order.number,
+            'customer_name': sales_order.customer_name,
+            'id': sales_order.id
         }
 
         cursor = self.__get_cursor()
-        if sales_order["id"] is None:
-            cursor.execute("""INSERT INTO sales_order (number, customer_name, details)
-                                VALUES(%(number)s, %(customer_name)s, %(details)s)""", values)
+        if sales_order.id is None:
+            cursor.execute("""INSERT INTO sales_order (number, customer_name)
+                                VALUES(%(number)s, %(customer_name)s)""", values)
             sales_order_id = cursor.lastrowid
         else:
-            cursor.execute("""UPDATE sales_order SET number = %(number)s, customer_name = %(customer_name)s details = %(details)s
+            cursor.execute("""UPDATE sales_order SET number = %(number)s, customer_name = %(customer_name)s
                                 WHERE id = %(id)s""", values)
             sales_order_id = values["id"]
         cursor.execute("COMMIT;")
         cursor.close()
         return sales_order_id
     
-    def delete_sales_order(self, sales_order: dict) -> None:
+    def delete_sales_order(self, sales_order) -> None:
         values = {
-            'id': sales_order["id"]
+            'id': sales_order.id
         }
         
         # Iterate through all of the sales order items and delete them.
@@ -659,6 +698,10 @@ class FishbowlDatabase(Database):
                         WHEN customer.name = "Bennington Pontoon Boats" THEN "Bennington"
                         ELSE customer.name
                     END AS customer_name,
+                    CASE
+                        WHEN customerparts.lastPrice THEN customerparts.lastPrice
+                        ELSE product.price
+                    END AS unit_price_dollars,
                     DATE(so.dateFirstShip) AS due_date,
                     -- DATE_SUB(so.dateFirstShip, INTERVAL 14 DAY) AS cutDate,
                     soitem.soLineItem AS line_number,
@@ -672,6 +715,7 @@ class FishbowlDatabase(Database):
                 JOIN soitem ON soitem.soId = so.id
                 JOIN customer ON so.customerId = customer.id
                 JOIN product ON soitem.productId = product.id
+                LEFT JOIN customerparts ON product.id = customerparts.productId AND customer.id = customerparts.customerId
                 JOIN uom productuom ON product.uomId = productuom.id
                 WHERE soitem.statusId < 50 -- 50 = Finished
                 AND (soitem.qtyToFulfill - qtyPicked - qtyFulfilled) > 0

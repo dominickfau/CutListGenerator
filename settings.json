@@ -2,8 +2,8 @@
     "Fishbowl_MySQL":
     {
         "auth": {
-            "host": "127.0.0.1",
-            "port": 3306,
+            "host": "192.168.2.254",
+            "port": 3305,
             "user": "gone",
             "password": "fishing",
             "database": "qes"
@@ -12,11 +12,11 @@
     "CutList_MySQL":
     {
         "auth": {
-            "host": "127.0.0.1",
+            "host": "192.168.2.254",
             "port": 3306,
             "user": "cutlist",
             "password": "Letmein2021",
-            "database": "cutlistgenerator",
+            "database": "cutlistgenerator_test",
             "autocommit": true
         }
     }

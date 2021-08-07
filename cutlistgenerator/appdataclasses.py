@@ -2,8 +2,8 @@ import datetime
 from dataclasses import dataclass
 from typing import Optional, List
 
-from error import ProductNotInKitError
-from database import CutListDatabase, MySQLDatabaseConnection
+from cutlistgenerator.error import ProductNotInKitException
+from cutlistgenerator.database import CutListDatabase, MySQLDatabaseConnection
 
 
 @dataclass
@@ -23,7 +23,7 @@ class Product:
         """Initialize the product after it's been created."""
         
         if self.kit_flag and self.parent_kit_product is None:
-            raise ProductNotInKitError("Product is marked as a kit but does not have a parent kit product number.")
+            raise ProductNotInKitException("Product is marked as a kit but does not have a parent kit product number.")
 
         if self.unit_price_dollars is None:
             self.unit_price_dollars = 0.0
@@ -36,9 +36,15 @@ class Product:
 
     @classmethod
     def from_number(cls, database_connection: CutListDatabase, number: str) -> 'Product':
-        """Returns a product from the database by its number."""
+        """Returns a product from the database by its number. Returns None if not found."""
 
-        return cls(database_connection, **database_connection.get_product_by_number(number))
+        data = database_connection.get_product_by_number(number)
+        if not data:
+            return None
+
+        parent_kit_product_number = data.pop('parent_kit_product_number', None)
+
+        return cls(database_connection, **data)
     
     def set_parent_kit_product(self, parent_kit_product: 'Product'):
         """Sets the parent kit product for this product."""
@@ -49,7 +55,7 @@ class Product:
     def save(self):
         """Saves the product to the database."""
 
-        self.id = self.database_connection.save_product(self.__dict__)
+        self.id = self.database_connection.save_product(self)
 
 
 @dataclass
@@ -163,8 +169,19 @@ class SalesOrderItem:
     @classmethod
     def from_dict(cls, database_connection: CutListDatabase, sales_order_item_dict: dict) -> 'SalesOrderItem':
         """Creates a sales order item from a dictionary."""
+        cls(database_connection, **sales_order_item_dict)
+
+        product = Product.from_number()
+
+        sales_order_item = cls(database_connection, )
         
-        return cls(database_connection, **sales_order_item_dict)
+        return sales_order_item
+    
+    @classmethod
+    def find_by_product_number_and_line_number(cls, database_connection: CutListDatabase, product_number, line_number) -> 'SalesOrderItem':
+        """Finds a sales order item by product number and line number. Returns None if not found."""
+
+        items = database_connection.get_sales_order_items_by_sales_order_number()
 
     @classmethod
     def from_sales_order_item_id(cls, database_connection: CutListDatabase, sales_order_item_id: int) -> 'SalesOrderItem':
@@ -193,7 +210,13 @@ class SalesOrderItem:
     def save(self):
         """Saves the sales order item to the database."""
 
-        self.id = self.database_connection.save_sales_order_item(self.__dict__)
+        self.id = self.database_connection.save_sales_order_item(self)
+    
+    def delete(self):
+        """Delete the sales order item."""
+
+        self.database_connection.delete_sales_order_item(self)
+        self.id = None
 
 
 @dataclass
@@ -240,12 +263,29 @@ class SalesOrder:
         
         self.order_items.append(item)
     
+    def remove_item(self, order_item: SalesOrderItem):
+        """Removes a sales order item from this sales order."""
+
+        for item in self.order_items:
+            if item != order_item:
+                continue
+            
+            self.order_items.remove(order_item)
+            item.delete()
+    
+    def remove_all_items(self):
+        """Removes all sales order items."""
+
+        for item in self.order_items:
+            self.order_items.remove(item)
+            item.delete()
+    
     def save(self):
         """Saves the sales order to the database."""
 
         for item in self.order_items:
             item.save()
-        self.id = self.database_connection.save_sales_order(self.__dict__)
+        self.id = self.database_connection.save_sales_order(self)
 
 
 @dataclass

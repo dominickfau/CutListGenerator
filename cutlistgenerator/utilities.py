@@ -1,10 +1,8 @@
 from cutlistgenerator.database import FishbowlDatabase, CutListDatabase
-from cutlistgenerator.appdataclasses import SalesOrder
+from cutlistgenerator.appdataclasses import Product, SalesOrder, SalesOrderItem
 
 
 def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabase, cut_list_database: CutListDatabase):
-    fishbowl_cursor = fishbowl_database.__get_cursor()
-
     fishbowl_data = fishbowl_database.get_all_open_sales_order_items()
 
     # Keys in fishbowl_data.
@@ -17,26 +15,60 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabase, c
     for row in fishbowl_data:
         so_number = row['so_number']
         current_sales_order = SalesOrder.find_by_number(cut_list_database, number=so_number)
+        current_product_number = row['product_number']
+        current_line_number = row['line_number']
+        current_product_description = row['description']
+        current_product_uom = row['uom']
+        current_product_unit_price_dollars = row['unit_price_dollars']
+
+
+        current_product = Product.from_number(database_connection=cut_list_database, number=current_product_number)
+
+        if not current_product:
+            # TODO: Add parent kit product.
+            current_product = Product(database_connection=cut_list_database,
+                                    number=current_product_number,
+                                    description=current_product_description,
+                                    uom=current_product_uom,
+                                    unit_price_dollars=current_product_unit_price_dollars,
+                                    kit_flag=False,
+                                    parent_kit_product=None)
+        current_product.save()
         
         if current_sales_order:
-            # Update the current sales order items with the data from the fishbowl.
-            for order_item in current_sales_order.order_items:
-                if order_item.product.number != row['product_number'] and order_item.line_number != row['line_number']:
+            # TODO: Add ability to update sales order from fishbowl.
+            
+            for current_item in current_sales_order.order_items:
+                if current_item.product.number == current_product.number and current_item.line_number == current_line_number:
                     continue
                 
-                order_item.due_date = row['due_date']
-                order_item.qty_picked = row['qty_picked']
-                order_item.qty_fulfilled = row['qty_fulfilled']
-                order_item.qty_to_fulfill = row['qty_to_fulfill']
-                order_item.product.description = row['description']
-                order_item.product.uom = row['uom']
-                order_item.product.unit_price_dollars = row['unit_price_dollars']
-        
-
-
+                order_item = SalesOrderItem(database_connection=cut_list_database,
+                                            product=current_product,
+                                            due_date=row['due_date'],
+                                            qty_to_fulfill=row['qty_to_fulfill'],
+                                            qty_picked=row['qty_picked'],
+                                            qty_fulfilled=row['qty_fulfilled'],
+                                            line_number=current_line_number,
+                                            sales_order_id=current_sales_order.id)
+                current_sales_order.add_item(order_item)
+                current_sales_order.save()
+        else:
+            current_sales_order = SalesOrder(database_connection=cut_list_database,
+                                                customer_name=row['customer_name'],
+                                                number=so_number)
+            current_sales_order.save()
             
-        
-    
+            order_item = SalesOrderItem(database_connection=cut_list_database,
+                                            product=current_product,
+                                            due_date=row['due_date'],
+                                            qty_to_fulfill=row['qty_to_fulfill'],
+                                            qty_picked=row['qty_picked'],
+                                            qty_fulfilled=row['qty_fulfilled'],
+                                            line_number=current_line_number,
+                                            sales_order_id=current_sales_order.id)
+            current_sales_order.add_item(order_item)
+            current_sales_order.save()
+
         rows_inserted += 1
     
-    fishbowl_cursor.close()
+    return total_rows, rows_inserted

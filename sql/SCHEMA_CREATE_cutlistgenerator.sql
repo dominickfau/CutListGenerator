@@ -1,7 +1,6 @@
-DROP DATABASE IF EXISTS `cutlistgenerator`;
-CREATE DATABASE `cutlistgenerator` /*!40100 DEFAULT CHARACTER SET utf8 */;
-USE `cutlistgenerator`;
-DROP TABLE IF EXISTS `cutlist`;
+DROP DATABASE IF EXISTS `cutlistgenerato_TESTr`;
+CREATE DATABASE `cutlistgenerator_TEST` /*!40100 DEFAULT CHARACTER SET utf8 */;
+USE `cutlistgenerator_TEST`;
 
 CREATE TABLE `database_version` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
