@@ -8,6 +8,12 @@ from typing import List
 # from json import JSONEncoder
 
 
+FISHBOWL_TO_CUT_LIST_DATABASE_MAPPING = {
+    
+}
+
+
+
 # class DatabaseEncoder(JSONEncoder):
 #         def default(self, obj):
 #             if isinstance(obj, datetime.datetime):
@@ -18,13 +24,18 @@ from typing import List
 #                 return obj.__dict__
 
 
-class CutListDatabase(ABC):
+class Database(ABC):
     """Base class for Databases"""
 
-    @staticmethod
+    def __init__(self, connection_args: dict):
+        """Initialize the Database"""
+
+        self.connection = None
+        self.connection_args = connection_args
+    
     @abstractmethod
-    def remove_unsupported_types(data: dict) -> dict:
-        """Remove unsupported types from data."""
+    def create(self):
+        """Create the Database"""
         pass
 
     @abstractmethod
@@ -36,6 +47,10 @@ class CutListDatabase(ABC):
     def disconnect(self):
         """Disconnect from database."""
         pass
+
+
+class CutListDatabase(Database):
+    """Base class for CutList Databases"""
 
     # Product methods
     @abstractmethod
@@ -62,6 +77,11 @@ class CutListDatabase(ABC):
     @abstractmethod
     def get_wire_cutter_options_by_wire_cutter_name(self, wire_cutter_name: str) -> List[dict]:
         """Get wire cutter options by wire cutter name. Returns empty list if not found."""
+        pass
+
+    @abstractmethod
+    def get_wire_cutter_option_by_name(self, option_name: str) -> dict:
+        """Get wire cutter option by option name. Returns None if not found."""
         pass
     
     @abstractmethod
@@ -128,13 +148,18 @@ class CutListDatabase(ABC):
 
     # SalesOrderItem methods
     @abstractmethod
-    def get_all_sales_order_items_by_sales_order_number(self, number: str) -> List[dict]:
+    def get_sales_order_items_by_sales_order_number(self, number: str) -> List[dict]:
+        """Get all sales order items for sales order by number. Returns empty list if not found."""
+        pass
+    
+    @abstractmethod
+    def get_sales_order_items_by_sales_order_id(self, sales_order_id: int) -> List[dict]:
         """Get all sales order items for sales order by number. Returns empty list if not found."""
         pass
 
     @abstractmethod
-    def get_all_sales_order_items_by_sales_order_id(self, sales_order_id: int) -> List[dict]:
-        """Get all sales order items by sales order id. Returns empty list if not found."""
+    def get_sales_order_item_by_id(self, sales_order_id: int) -> List[dict]:
+        """Gets a sales order item by sales order id. Returns empty list if not found."""
         pass
 
     @abstractmethod
@@ -163,13 +188,24 @@ class CutListDatabase(ABC):
         """Get cut job by product number. Returns None if not found."""
         pass
 
+    @abstractmethod
+    def get_cut_job_by_id(self, id: int) -> dict:
+        """Get cut job by id. Returns None if not found."""
+        pass
+    
+    @abstractmethod
+    def save_cut_job(self, cut_job: dict) -> int:
+        """Save cut job. Returns id of saved cut job."""
+        pass
+
+    @abstractmethod
+    def delete_cut_job(self, cut_job: dict) -> None:
+        """Delete cut job."""
+        pass
+
 
 class MySQLDatabaseConnection(CutListDatabase):
     """MySQL Database Connection"""
-
-    def __init__(self, connection_args: dict):
-        self.connection = None
-        self.connection_args = connection_args
 
     def connect(self):
         self.connection = mysql.connector.connect(**self.connection_args)
@@ -252,6 +288,20 @@ class MySQLDatabaseConnection(CutListDatabase):
 
         cursor = self.__get_cursor()
         cursor.execute("SELECT * FROM wire_cutter_option WHERE id = %(id)s", values)
+        wire_cutter_option = cursor.fetchone()
+        cursor.close()
+        if not wire_cutter_option:
+            return None
+        return wire_cutter_option
+    
+
+    def get_wire_cutter_option_by_name(self, wire_cutter_option_name: int) -> dict:
+        values = {
+            'name': wire_cutter_option_name
+        }
+
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM wire_cutter_option WHERE name = %(name)s", values)
         wire_cutter_option = cursor.fetchone()
         cursor.close()
         if not wire_cutter_option:
@@ -392,6 +442,20 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.close()
     
     # Sales Order Item methods
+    def get_sales_order_items_by_sales_order_id(self, sales_order_id: int) -> List[dict]:
+        values = {
+            'sales_order_id': sales_order_id
+        }
+
+        cursor = self.__get_cursor()
+        cursor.execute("""SELECT * FROM sales_order_item
+                            WHERE sales_order_id = %(sales_order_id)s""", values)
+        items = cursor.fetchall()
+        cursor.close()
+        if not items:
+            return []
+        return items
+
     def get_sales_order_item_by_id(self, sales_order_item_id: int) -> dict:
         values = {
             'id': sales_order_item_id
@@ -405,7 +469,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             return None
         return sales_order_item
     
-    def get_all_sales_order_items_by_sales_order_number(self, number: str) -> List[dict]:
+    def get_sales_order_items_by_sales_order_number(self, number: str) -> List[dict]:
         values = {
             'number': number
         }
@@ -520,19 +584,47 @@ class MySQLDatabaseConnection(CutListDatabase):
         # Iterate through all of the sales order items and delete them.
         for item in sales_order["sales_order_items"]:
             self.delete_sales_order_item(item)
+    
+    # CutJobs methods
+    def get_all_cut_jobs(self) -> List[dict]:
+        pass
+
+    def get_all_open_cut_jobs(self) -> List[dict]:
+        pass
+
+    def get_cut_job_by_product_number(self, product_number: str) -> dict:
+        pass
+
+    def get_cut_job_by_id(self, id: int) -> dict:
+        pass
+    
+    def save_cut_job(self, cut_job: dict) -> int:
+        pass
+
+    def delete_cut_job(self, cut_job: dict) -> None:
+        values = {
+            'id': cut_job["id"]
+        }
+
+        cursor = self.__get_cursor()
+        cursor.execute("DELETE FROM cut_job WHERE id = %(id)s", values)
+        cursor.execute("COMMIT;")
+        cursor.close()
 
 
-
-
-class FishbowlDatabase:
+class FishbowlDatabase(Database):
     """MySQL database connection to a Fishbowl database."""
     
-    def __init__(self, connection_args: dict):
-        self.connection = None
-        self.connection_args = connection_args
-
     def connect(self):
         self.connection = mysql.connector.connect(**self.connection_args)
+    
+    def disconnect(self):
+        if self.connection:
+            self.connection.close()
+            self.connection = None
+    
+    def create(self):
+        raise NotImplementedError("This method is not implemented. A Fishbowl database must be created when installing Fishbowl.")
 
     def __get_cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None, dictionary=True, named_tuple=None):
         """Get a cursor to the database. Defaults to a dictionary cursor."""
@@ -540,11 +632,6 @@ class FishbowlDatabase:
             self.connect()
 
         return self.connection.cursor(buffered, raw, prepared, cursor_class, dictionary, named_tuple)
-
-    def disconnect(self):
-        if self.connection:
-            self.connection.close()
-            self.connection = None
 
     def get_all_open_sales_order_items(self) -> List[dict]:
         cursor = self.__get_cursor()
@@ -556,14 +643,15 @@ class FishbowlDatabase:
                         WHEN customer.name = "MARINE MOORING, INC." THEN "Marine Mooring"
                         WHEN customer.name = "Bennington Pontoon Boats" THEN "Bennington"
                         ELSE customer.name
-                    END AS customerName,
-                    DATE(so.dateFirstShip) AS dueDate,
+                    END AS customer_name,
+                    DATE(so.dateFirstShip) AS due_date,
                     -- DATE_SUB(so.dateFirstShip, INTERVAL 14 DAY) AS cutDate,
-                    soitem.soLineItem AS soLineItem,
-                    product.num AS productNum,
+                    soitem.soLineItem AS line_number,
+                    product.num AS product_number,
                     product.description,
-                    -- soitem.qtyToFulfill AS qtyToFulfill,
-                    (soitem.qtyToFulfill - qtyPicked - qtyFulfilled) AS qtyLeftToCut,
+                    soitem.qtyToFulfill AS qty_to_fulfill,
+                    soitem.qtyPicked AS qty_picked,
+                    soitem.qtyFulfilled AS qty_fulfilled,
                     productuom.code AS uom
                 FROM so
                 JOIN soitem ON soitem.soId = so.id
@@ -624,6 +712,7 @@ class FishbowlDatabase:
         kit_items = self.get_kit_items_for_product_number(product_number)
 
         # TODO: Change this to multiply the quantity of the kit part by the quantity of the next kit part.
+        # TODO: Check if this works as expected.
 
         kit_item_list = []
         for kit_item in kit_items:

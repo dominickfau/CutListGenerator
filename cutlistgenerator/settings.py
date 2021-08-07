@@ -1,5 +1,7 @@
 import json
+import os
 
+from cutlistgenerator.error import InvalidSettingsFilePathException
 
 DEFULT_SETTINGS = {
     "Fishbowl_MySQL":
@@ -24,20 +26,70 @@ DEFULT_SETTINGS = {
     }
 }
 
+class Settings:
+    """Settings class."""
 
-def load_settings(file_path: str) -> dict:
-    """Read settings file and return a dictionary with the settings.
-        If settings file not found, returns the default settings."""
+    def __init__(self):
+        """Initialize. Loads default settings."""
 
-    try:
-        with open(file_path, "r") as f:
-            settings = json.loads(f.read())
-    except FileNotFoundError:
-        settings = DEFULT_SETTINGS
-    return settings
+        self.file_path = None
+        self.fishbowl_settings = DEFULT_SETTINGS["Fishbowl_MySQL"]
+        self.cutlist_settings = DEFULT_SETTINGS["CutList_MySQL"]
+        self.load()
+    
+    @staticmethod
+    def validate_file_path(file_path: str) -> bool:
+        """Validate file path."""
 
-def save_settings(file_path: str, settings: dict):
-    """Save settings file to disk."""
+        return os.path.isfile(file_path)
 
-    with open(file_path, "w") as f:
-        f.write(json.dumps(settings))
+    def get_fishbowl_settings(self) -> dict:
+        """Get fishbowl settings."""
+
+        return self.fishbowl_settings
+    
+    def get_cutlist_settings(self) -> dict:
+        """Get cutlist settings."""
+        
+        return self.cutlist_settings
+    
+    def set_file_path(self, file_path: str) -> None:
+        """Set file path."""
+
+        if not Settings.validate_file_path(file_path):
+            raise InvalidSettingsFilePathException(f"Could not set file path: {file_path}.", file_path=file_path)
+        
+        self.file_path = file_path
+    
+    def load(self) -> None:
+        """Load settings from file."""
+
+        if not self.file_path:
+            self.fishbowl_settings = DEFULT_SETTINGS["Fishbowl_MySQL"]
+            self.cutlist_settings = DEFULT_SETTINGS["CutList_MySQL"]
+            return
+
+        if not self.validate_file_path(self.file_path):
+            raise InvalidSettingsFilePathException(f"Could not load settings from file: {self.file_path}.", file_path=self.file_path)
+        
+        with open(self.file_path, 'r') as file:
+            data = json.load(file)
+        
+        self.fishbowl_settings = data["Fishbowl_MySQL"]
+        self.cutlist_settings = data["CutList_MySQL"]
+
+    def save_to_file_path(self, file_path: str) -> None:
+        """Save settings to file to disk. This also updates the file path."""
+
+        if not self.validate_file_path(self.file_path):
+            raise InvalidSettingsFilePathException(f"Could not load settings from file: {self.file_path}.", file_path=self.file_path)
+        
+        self.file_path = file_path
+        
+        data = {
+            "Fishbowl_MySQL": self.fishbowl_settings,
+            "CutList_MySQL": self.cutlist_settings
+        }
+
+        with open(file_path, 'w') as file:
+            json.dumps(data, file, indent=4)
