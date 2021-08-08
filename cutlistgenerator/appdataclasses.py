@@ -1,9 +1,9 @@
 import datetime
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List
 
 from cutlistgenerator.error import ProductNotInKitException
-from cutlistgenerator.database import CutListDatabase, MySQLDatabaseConnection
+from cutlistgenerator.database.cutlistdatabase import CutListDatabase
 
 
 @dataclass
@@ -23,10 +23,22 @@ class Product:
         """Initialize the product after it's been created."""
         
         if self.kit_flag and self.parent_kit_product is None:
-            raise ProductNotInKitException("Product is marked as a kit but does not have a parent kit product number.")
+            raise ProductNotInKitException("Product is marked as a kit but does not have a parent kit product.")
 
         if self.unit_price_dollars is None:
             self.unit_price_dollars = 0.0
+
+    @staticmethod
+    def find_parent_kit_product_from_child_product_data(database_connection, product_data: dict) -> dict:
+        """Finds the parent kit product from the child product data. Returns product data with 'parent_kit_product' key populated."""
+
+        parent_kit_product = None
+        parent_kit_product_data = database_connection.get_parent_product_from_child_product_id(product_data['id'])
+        if parent_kit_product_data:
+            parent_kit_product = Product.from_number(database_connection, parent_kit_product_data['number'])
+        
+        product_data['parent_kit_product'] = parent_kit_product
+        return product_data
 
     @classmethod
     def from_number(cls, database_connection: CutListDatabase, number: str) -> 'Product':
@@ -35,9 +47,8 @@ class Product:
         data = database_connection.get_product_by_number(number)
         if not data:
             return None
-
-        # TODO: Come up with a way to use this parent_kit_product_number.
-        parent_kit_product_number = data.pop('parent_kit_product_number', None)
+        
+        data = cls.find_parent_kit_product_from_child_product_data(database_connection, data)
 
         return cls(database_connection, **data)
     
@@ -48,14 +59,13 @@ class Product:
         data = database_connection.get_product_by_id(id)
         if not data:
             return None
-
-        # TODO: Come up with a way to use this parent_kit_product_number.
-        parent_kit_product_number = data.pop('parent_kit_product_number', None)
+        
+        data = cls.find_parent_kit_product_from_child_product_data(database_connection, data)
 
         return cls(database_connection, **data)
     
     def set_parent_kit_product(self, parent_kit_product: 'Product'):
-        """Sets the parent kit product for this product."""
+        """Sets the parent kit product number for this product."""
 
         self.parent_kit_product = parent_kit_product
         self.kit_flag = True
@@ -287,7 +297,7 @@ class CutJob:
     database_connection: CutListDatabase
     product: Product
     related_sales_order_item: SalesOrderItem = None
-    assigned_cutter: WireCutter = None
+    assigned_wire_cutter: WireCutter = None
     quantity_cut: int = None
     date_cut_start: datetime.datetime = None
     date_cut_end: datetime.datetime = None
@@ -301,10 +311,10 @@ class CutJob:
     is_ready_for_build: bool = False
     id: int = None
 
-    def set_assigned_cutter(self, cutter: WireCutter):
-        """Set the assigned cutter for this cut job."""
+    def set_assigned_wire_cutter(self, wire_cutter: WireCutter):
+        """Set the assigned wire cutter for this cut job."""
 
-        self.assigned_cutter = cutter
+        self.assigned_wire_cutter = wire_cutter
     
     def set_related_sales_order_item(self, item: SalesOrderItem):
         """Set the related sales order item for this cut job."""
@@ -315,28 +325,7 @@ class CutJob:
         """Saves the cut job to the database."""
 
         self.id = self.database_connection.save_cut_job(self)
-        if self.assigned_cutter != None:
-            self.assigned_cutter.save()
+        if self.assigned_wire_cutter != None:
+            self.assigned_wire_cutter.save()
         if self.related_sales_order_item != None:
             self.related_sales_order_item.save()
-
-def main():
-    """For testing purposes."""
-    auth = {
-            "host": "127.0.0.1",
-            "port": 3306,
-            "user": "cutlist",
-            "password": "Letmein2021",
-            "database": "cutlistgenerator_refactor"
-        }
-
-    database_connection = MySQLDatabaseConnection(auth)
-
-    new_product = Product(database_connection=database_connection, number="1", description="Test Product", uom="ea", unit_price_dollars=1.0)
-
-    print(new_product.__dict__)
-    new_product.save()
-
-
-if __name__ == '__main__':
-    main()

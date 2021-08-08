@@ -1,221 +1,9 @@
-import mysql.connector
-# import datetime
-# import decimal
-# from mysql.connector import errorcode as mysql_errorcodes
-# from mysql.connector import Error as mysql_error
-from abc import ABC, abstractmethod
-from typing import List
-# from json import JSONEncoder
-
-
-FISHBOWL_TO_CUT_LIST_DATABASE_MAPPING = {
-    
-}
-
-
-
-# class DatabaseEncoder(JSONEncoder):
-#         def default(self, obj):
-#             if isinstance(obj, datetime.datetime):
-#                 return obj.strftime("%Y-%m-%d %H:%M:%S")
-#             elif isinstance(obj, decimal.Decimal):
-#                 return float(obj)
-#             else:
-#                 return obj.__dict__
-
-
-class Database:
-    """Base class for Databases"""
-
-    def __init__(self, connection_args: dict):
-        """Initialize the Database"""
-
-        self.connection = None
-        self.connection_args = connection_args
-    
-    @abstractmethod
-    def create(self):
-        """Create the Database"""
-        pass
-
-    @abstractmethod
-    def connect(self):
-        """Connect to database."""
-        pass
-
-    @abstractmethod
-    def disconnect(self):
-        """Disconnect from database."""
-        pass
-
-    @abstractmethod
-    def get_current_version(self):
-        """Get the current version of the database."""
-        pass
-
-
-class CutListDatabase(Database):
-    """Base class for CutList Databases"""
-
-    # Product methods
-    @abstractmethod
-    def get_product_by_number(self, number: str) -> dict:
-        """Get product by number. Returns None if not found."""
-        pass
-
-    @abstractmethod
-    def get_product_by_id(self, id: int) -> dict:
-        """Get product by ID. Returns None if not found."""
-        pass
-
-    @abstractmethod
-    def get_all_products(self) -> List[dict]:
-        """Get all products. Returns empty list if not found."""
-        pass
-
-    @abstractmethod
-    def save_product(self, product) -> int:
-        """Save product to database. Returns id of saved product."""
-        pass
-    
-    @abstractmethod
-    def delete_product(self, product) -> None:
-        """Delete product from database."""
-        pass
-    
-    # WireCutterOption methods
-    @abstractmethod
-    def get_wire_cutter_options_by_wire_cutter_name(self, wire_cutter_name: str) -> List[dict]:
-        """Get wire cutter options by wire cutter name. Returns empty list if not found."""
-        pass
-
-    @abstractmethod
-    def get_wire_cutter_option_by_name(self, option_name: str) -> dict:
-        """Get wire cutter option by option name. Returns None if not found."""
-        pass
-    
-    @abstractmethod
-    def save_wire_cutter_option(self, wire_cutter_option) -> int:
-        """Save wire cutter option. Returns None if not found. Returns id of saved wire cutter option."""
-        pass
-
-    @abstractmethod
-    def delete_wire_cutter_option(self, wire_cutter_option) -> None:
-        """Delete wire cutter option."""
-        pass
-
-    # WireCutter methods
-    @abstractmethod
-    def get_wire_cutter_by_name(self, name: str) -> dict:
-        """Get wire cutter by name. Returns None if not found."""
-        pass
-
-    @abstractmethod
-    def get_all_wire_cutters(self) -> List[dict]:
-        """Get all wire cutters."""
-        pass
-    
-    @abstractmethod
-    def save_wire_cutter(self, wire_cutter) -> int:
-        """Save wire cutter. Returns id of saved wire cutter."""
-        pass
-
-    @abstractmethod
-    def delete_wire_cutter(self, wire_cutter) -> None:
-        """Delete wire cutter."""
-        pass
-
-    # SalesOrder methods
-    @abstractmethod
-    def get_sales_order_by_number(self, number: str) -> dict:
-        """Get sales order by number. Returns None if not found."""
-        pass
-
-    # @abstractmethod
-    # def get_all_open_sales_orders(self) -> List[dict]:
-    #     """Get all open sales orders. Returns empty list if not found."""
-    #     pass
-
-    @abstractmethod
-    def get_all_sales_orders_by_customer_name(self, name: str) -> List[dict]:
-        """Get all sales orders by customer name. Returns empty list if not found."""
-        pass
-
-    @abstractmethod
-    def get_all_sales_orders(self) -> List[dict]:
-        """Get all sales orders. Returns empty list if not found."""
-        pass
-
-    @abstractmethod
-    def save_sales_order(self, sales_order) -> int:
-        """Save sales order. Returns id of saved sales order."""
-        pass
-
-    @abstractmethod
-    def delete_sales_order(self, sales_order) -> None:
-        """Delete sales order."""
-        pass
-
-    # SalesOrderItem methods
-    @abstractmethod
-    def get_sales_order_items_by_sales_order_number(self, number: str) -> List[dict]:
-        """Get all sales order items for sales order by number. Returns empty list if not found."""
-        pass
-    
-    @abstractmethod
-    def get_sales_order_items_by_sales_order_id(self, sales_order_id: int) -> List[dict]:
-        """Get all sales order items for sales order by number. Returns empty list if not found."""
-        pass
-
-    @abstractmethod
-    def get_sales_order_item_by_id(self, sales_order_id: int) -> List[dict]:
-        """Gets a sales order item by sales order id. Returns empty list if not found."""
-        pass
-
-    @abstractmethod
-    def save_sales_order_item(self, sales_order_item) -> int:
-        """Save sales order item. Returns id of saved sales order item."""
-        pass
-
-    @abstractmethod
-    def delete_sales_order_item(self, sales_order_item) -> None:
-        """Delete sales order item."""
-        pass
-
-    # CutJobs methods
-    @abstractmethod
-    def get_all_cut_jobs(self) -> List[dict]:
-        """Get all cut jobs. Returns empty list if not found."""
-        pass
-
-    @abstractmethod
-    def get_all_open_cut_jobs(self) -> List[dict]:
-        """Get all open cut jobs. Returns empty list if not found."""
-        pass
-
-    @abstractmethod
-    def get_cut_job_by_product_number(self, product_number: str) -> dict:
-        """Get cut job by product number. Returns None if not found."""
-        pass
-
-    @abstractmethod
-    def get_cut_job_by_id(self, id: int) -> dict:
-        """Get cut job by id. Returns None if not found."""
-        pass
-    
-    @abstractmethod
-    def save_cut_job(self, cut_job) -> int:
-        """Save cut job. Returns id of saved cut job."""
-        pass
-
-    @abstractmethod
-    def delete_cut_job(self, cut_job) -> None:
-        """Delete cut job."""
-        pass
+from . import *
+from .cutlistdatabase import CutListDatabase
 
 
 class MySQLDatabaseConnection(CutListDatabase):
-    """MySQL Database Connection"""
+    """MySQL Database Connection for the cut list database."""
 
     def connect(self):
         self.connection = mysql.connector.connect(**self.connection_args)
@@ -273,31 +61,42 @@ class MySQLDatabaseConnection(CutListDatabase):
         return products
     
     def save_product(self, product) -> int:
+        if product.parent_kit_product:
+            parent_kit_product_id = product.parent_kit_product.id
+        else:
+            parent_kit_product_id = None
+
         values = {
             'number': product.number,
             'description': product.description,
             'uom': product.uom,
             'unit_price_dollars': product.unit_price_dollars,
             'kit_flag': product.kit_flag,
+            'parent_kit_product_id': parent_kit_product_id,
             'id': product.id
         }
-
-        if not product.parent_kit_product:
-            values['parent_kit_product_number'] = None
-        else:
-            values['parent_kit_product_number'] = product.parent_kit_product.number
 
         cursor = self.__get_cursor()
 
         if product.id is None:
-            cursor.execute("""INSERT INTO product (number, description, uom, unit_price_dollars, kit_flag, parent_kit_product_number)
-                                VALUES(%(number)s, %(description)s, %(uom)s, %(unit_price_dollars)s, %(kit_flag)s, %(parent_kit_product_number)s)""", values)
+            cursor.execute("""INSERT INTO product (number, description, uom, unit_price_dollars, kit_flag)
+                                VALUES(%(number)s, %(description)s, %(uom)s, %(unit_price_dollars)s, %(kit_flag)s)""", values)
             product_id = cursor.lastrowid
+            values['id'] = product_id
+            if product.parent_kit_product:
+                cursor.execute("""INSERT INTO parent_to_child_product (child_product_id, parent_product_id)
+                                    VALUES(%(id)s, %(parent_kit_product_id)s)""", values)
         else:
             cursor.execute("""UPDATE product SET number = %(number)s, description = %(description)s, uom = %(uom)s,
-                                unit_price_dollars = %(unit_price_dollars)s, kit_flag = %(kit_flag)s, parent_kit_product_number = %(parent_kit_product_number)s
+                                unit_price_dollars = %(unit_price_dollars)s, kit_flag = %(kit_flag)s
                                 WHERE id = %(id)s""", values)
             product_id = values["id"]
+            
+            if product.parent_kit_product:
+                cursor.execute("""DELETE FROM parent_to_child_product WHERE child_product_id = %(id)s""", values)
+                cursor.execute("""INSERT INTO parent_to_child_product (child_product_id, parent_product_id)
+                                    VALUES(%(id)s, %(parent_kit_product_id)s)""", values)
+
         cursor.execute("COMMIT;")
         cursor.close()
         return product_id
@@ -311,6 +110,23 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.execute("DELETE FROM product WHERE id = %(id)s", values)
         cursor.execute("COMMIT;")
         cursor.close()
+    
+    def get_parent_product_from_child_product_id(self, child_product_id) -> dict:
+        values = {
+            'child_product_id': child_product_id
+        }
+
+        cursor = self.__get_cursor()
+        cursor.execute("""SELECT product.*
+                        FROM parent_to_child_product
+                        JOIN product ON parent_to_child_product.parent_product_id = product.id
+                        WHERE child_product_id = %(child_product_id)s""", values) 
+        parent_product = cursor.fetchone()
+        cursor.close()
+        if not parent_product:
+            return None
+        return parent_product
+
     
     # WireCutterOptions methods
     def get_wire_cutter_option_by_id(self, wire_cutter_option_id: int) -> dict:
@@ -654,19 +470,88 @@ class MySQLDatabaseConnection(CutListDatabase):
     
     # CutJobs methods
     def get_all_cut_jobs(self) -> List[dict]:
-        pass
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM cut_job")
+        cut_jobs = cursor.fetchall()
+        cursor.close()
+        if not cut_jobs:
+            return []
+        return cut_jobs
 
-    def get_all_open_cut_jobs(self) -> List[dict]:
-        pass
+    def get_all_uncut_cut_jobs(self) -> List[dict]:
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM cut_job WHERE is_cut = 0")
+        cut_jobs = cursor.fetchall()
+        cursor.close()
+        if not cut_jobs:
+            return []
+        return cut_jobs
 
-    def get_cut_job_by_product_number(self, product_number: str) -> dict:
-        pass
+    def get_cut_jobs_by_product_number(self, product_number: str) -> List[dict]:
+        cut_jobs = []
+        data = self.get_product_by_number(product_number)
+        if not data:
+            return []
+        for cut_job in self.get_all_cut_jobs():
+            if cut_job["product_id"] != data["id"]:
+                continue
+            cut_jobs.append(cut_job)
+        return cut_jobs
 
     def get_cut_job_by_id(self, id: int) -> dict:
-        pass
+        values = {
+            'id': id
+        }
+
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM cut_job WHERE id = %(id)s", values)
+        cut_job = cursor.fetchone()
+        cursor.close()
+        if not cut_job:
+            return None
+        return cut_job
     
-    def save_cut_job(self, cut_job: dict) -> int:
-        pass
+    def save_cut_job(self, cut_job) -> int:
+        related_sales_order_item_id = None
+        assigned_wire_cutter_id = None
+
+        if cut_job.related_sales_order_item is not None:
+            related_sales_order_item_id = cut_job.related_sales_order_item.id
+        
+        if cut_job.assigned_wire_cutter is not None:
+            assigned_wire_cutter_id = cut_job.assigned_wire_cutter.id
+
+
+        values = {
+            'product_id': cut_job.product_id,
+            'related_sales_order_id': related_sales_order_item_id,
+            'assigned_wire_cutter_id': assigned_wire_cutter_id,
+            'quantity_cut': cut_job.quantity_cut,
+            'date_cut_start': cut_job.date_cut_start,
+            'date_cut_end': cut_job.date_cut_end,
+            'date_termination_start': cut_job.date_termination_start,
+            'date_termination_end': cut_job.date_termination_end,
+            'date_splice_start': cut_job.date_splice_start,
+            'date_splice_end': cut_job.date_splice_end,
+            'is_cut': cut_job.is_cut,
+            'is_spliced': cut_job.is_spliced,
+            'is_terminated': cut_job.is_terminated,
+            'is_ready_for_build': cut_job.is_ready_for_build,
+            'id': cut_job.id
+        }
+
+        cursor = self.__get_cursor()
+        if cut_job.id is None:
+            cursor.execute("""INSERT INTO cut_job (product_id, is_cut)
+                                VALUES(%(product_id)s, %(is_cut)s)""", values)
+            cut_job_id = cursor.lastrowid
+        else:
+            cursor.execute("""UPDATE cut_job SET product_id = %(product_id)s, is_cut = %(is_cut)s
+                                WHERE id = %(id)s""", values)
+            cut_job_id = values["id"]
+        cursor.execute("COMMIT;")
+        cursor.close()
+        return cut_job_id
 
     def delete_cut_job(self, cut_job: dict) -> None:
         values = {
@@ -677,131 +562,3 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.execute("DELETE FROM cut_job WHERE id = %(id)s", values)
         cursor.execute("COMMIT;")
         cursor.close()
-
-
-class FishbowlDatabase(Database):
-    """MySQL database connection to a Fishbowl database."""
-    
-    def connect(self):
-        self.connection = mysql.connector.connect(**self.connection_args)
-    
-    def disconnect(self):
-        if self.connection:
-            self.connection.close()
-            self.connection = None
-    
-    def create(self):
-        raise NotImplementedError("This method is not implemented. A Fishbowl database must be created when installing Fishbowl.")
-    
-    def get_current_version(self) -> dict:
-        cursor = self.__get_cursor()
-        cursor.execute("SELECT * FROM databaseversion ORDER BY id DESC LIMIT 1")
-        return cursor.fetchone()
-
-    def __get_cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None, dictionary=True, named_tuple=None):
-        """Get a cursor to the database. Defaults to a dictionary cursor."""
-        if not self.connection:
-            self.connect()
-
-        return self.connection.cursor(buffered, raw, prepared, cursor_class, dictionary, named_tuple)
-
-    def get_all_open_sales_order_items(self) -> List[dict]:
-        cursor = self.__get_cursor()
-        cursor.execute("""
-                SELECT so.num AS so_number,
-                    CASE 
-                        WHEN customer.name = "Brunswick Boat Group, Fort Wayne Operatio" THEN "Brunswick"
-                        WHEN customer.name = "GODFREY MARINE-HURRICANE" THEN "Godfrey"
-                        WHEN customer.name = "MARINE MOORING, INC." THEN "Marine Mooring"
-                        WHEN customer.name = "Bennington Pontoon Boats" THEN "Bennington"
-                        ELSE customer.name
-                    END AS customer_name,
-                    CASE
-                        WHEN customerparts.lastPrice THEN customerparts.lastPrice
-                        ELSE product.price
-                    END AS unit_price_dollars,
-                    DATE(so.dateFirstShip) AS due_date,
-                    -- DATE_SUB(so.dateFirstShip, INTERVAL 14 DAY) AS cutDate,
-                    soitem.soLineItem AS line_number,
-                    product.num AS product_number,
-                    product.description,
-                    soitem.qtyToFulfill AS qty_to_fulfill,
-                    soitem.qtyPicked AS qty_picked,
-                    soitem.qtyFulfilled AS qty_fulfilled,
-                    productuom.code AS uom
-                FROM so
-                JOIN soitem ON soitem.soId = so.id
-                JOIN customer ON so.customerId = customer.id
-                JOIN product ON soitem.productId = product.id
-                LEFT JOIN customerparts ON product.id = customerparts.productId AND customer.id = customerparts.customerId
-                JOIN uom productuom ON product.uomId = productuom.id
-                WHERE soitem.statusId < 50 -- 50 = Finished
-                AND (soitem.qtyToFulfill - qtyPicked - qtyFulfilled) > 0
-                -- AND DATE_SUB(so.dateFirstShip, INTERVAL 14 DAY) < NOW()
-                AND product.num LIKE "50%"
-                AND productuom.code = "ea";
-        """)
-        data = cursor.fetchall()
-        cursor.close()
-        if not data:
-            return []
-        return data
-    
-    def get_kit_items_for_product_number(self, product_number: str) -> List[dict]:
-        """Finds all the kit items for a product number. Returns a list of dictionaries
-            with the child_part_number, and child_part_qty as keys."""
-
-        kit_items = []
-
-        cursor = self.__get_cursor()
-        values = {
-            'product_number': product_number
-        }
-
-        cursor.execute("""
-            SELECT 
-                -- finishedpart.num AS product_number,
-                rawpart.num AS child_part_number,
-                bomitem.quantity AS child_part_quantity
-            FROM product
-            JOIN part finishedpart ON product.partId = finishedpart.id
-            JOIN bomitem ON finishedpart.defaultBomId = bomitem.bomId
-            JOIN part rawpart ON bomitem.partId = rawpart.id
-            WHERE product.num = %(product_number)s
-            AND bomitem.typeId = (
-                                SELECT id
-                                FROM bomitemtype
-                                WHERE name = "Raw Good"
-                                )
-            AND ((rawpart.num LIKE "BC-10%" AND rawpart.uomId = (SELECT id FROM uom WHERE name = "Each")) OR rawpart.num LIKE "50%")
-            AND rawpart.typeId = (SELECT id FROM parttype WHERE name = "Inventory");
-        """, values)
-        kit_items = cursor.fetchall()
-        cursor.close()
-        if not kit_items:
-            return []
-        return kit_items
-
-    def get_kit_items_for_product_number_recursively(self, product_number: str) -> List[dict]:
-        """Finds all kit items for a product number recursively(i.e. for all kit parts). Retruns
-            a dictionary list for all items. Each dictionary contains the kit_part_number and kit_part_quantity."""
-
-        kit_items = self.get_kit_items_for_product_number(product_number)
-
-        # TODO: Change this to multiply the quantity of the kit part by the quantity of the next kit part.
-        # TODO: Check if this works as expected.
-
-        kit_item_list = []
-        for kit_item in kit_items:
-            # kit_item_list.append(kit_item)
-            kit_part_number = kit_item['kit_part_number']
-            # kit_part_quantity = kit_item['kit_part_quantity']
-            kit_data = self.get_kit_items_for_product_number_recursively(kit_part_number)
-
-            if not kit_data:
-                kit_item_list.append(kit_item)
-                continue
-
-            kit_item_list.extend(kit_data)
-        
-        return kit_item_list

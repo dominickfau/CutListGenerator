@@ -17,7 +17,6 @@ CREATE TABLE `product` (
   `description` varchar(255) NOT NULL,
   `unit_price_dollars` decimal(28,9) NOT NULL DEFAULT '0.000000000',
   `kit_flag` bit(1) NOT NULL DEFAULT b'0',
-  `parent_kit_product_number` varchar(45) DEFAULT NULL,
   `uom` varchar(45) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `number_UNIQUE` (`number`),
@@ -80,4 +79,13 @@ CREATE TABLE `sales_order_item` (
   KEY `FK_buiwejfgbuiwefjhbghjarg_idx` (`product_id`),
   CONSTRAINT `FK_buiajikfbgiuadfrgkijsfgbkj` FOREIGN KEY (`sales_order_id`) REFERENCES `sales_order` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `FK_buiwejfgbuiwefjhbghjarg` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `parent_to_child_product` (
+  `child_product_id` int(11) NOT NULL,
+  `parent_product_id` int(11) NOT NULL,
+  PRIMARY KEY (`child_product_id`,`parent_product_id`),
+  KEY `FK_hogjqwjhvbjhqwdkjvfdjh_idx` (`parent_product_id`),
+  CONSTRAINT `FK_guiwjkfijhwjhqwekjfgdsjb` FOREIGN KEY (`child_product_id`) REFERENCES `product` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `FK_hogjqwjhvbjhqwdkjvfdjh` FOREIGN KEY (`parent_product_id`) REFERENCES `product` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

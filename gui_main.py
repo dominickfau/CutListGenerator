@@ -1,21 +1,17 @@
 import sys
-import os
-import datetime
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QDialog, QApplication, QMessageBox
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QApplication, QMessageBox
 
 
 from cutlistgenerator.ui.mainwindow import Ui_MainWindow
 from cutlistgenerator.settings import Settings
-from cutlistgenerator.database import MySQLDatabaseConnection, FishbowlDatabase
+from cutlistgenerator.database.mysqldatabase import MySQLDatabaseConnection
+from cutlistgenerator.database.fishbowldatabase import FishbowlDatabaseConnection
 from cutlistgenerator import utilities
 
 DEFAULT_SETTINGS_FILE_NAME = "settings.json"
 PROGRAM_NAME = "Cut List Generator"
-__version__ = "0.0.3"
-
-# settings = load_settings(DEFAULT_SETTINGS_FILE_NAME)
-
+__version__ = "0.1.0"
 
 
 class Application(QtWidgets.QMainWindow):
@@ -35,7 +31,7 @@ class Application(QtWidgets.QMainWindow):
             self.settings.set_file_path(DEFAULT_SETTINGS_FILE_NAME)
             self.settings.load()
 
-        self.fishbowl_database = FishbowlDatabase(connection_args=self.settings.fishbowl_settings['auth'])
+        self.fishbowl_database = FishbowlDatabaseConnection(connection_args=self.settings.fishbowl_settings['auth'])
         self.cut_list_generator_database = MySQLDatabaseConnection(connection_args=self.settings.cutlist_settings['auth'])
 
         self.ui.actionGet_Current_SO_Data_From_Fishbowl.triggered.connect(self.get_current_fb_data)
