@@ -34,7 +34,7 @@ class Application(QtWidgets.QMainWindow):
         self.fishbowl_database = FishbowlDatabaseConnection(connection_args=self.settings.fishbowl_settings['auth'])
         self.cut_list_generator_database = MySQLDatabaseConnection(connection_args=self.settings.cutlist_settings['auth'])
 
-        self.ui.actionGet_Current_SO_Data_From_Fishbowl.triggered.connect(self.get_current_fb_data)
+        self.ui.actionGet_Sales_Order_Data.triggered.connect(self.get_current_fb_data)
 
     def get_current_fb_data(self):
         total_rows, rows_inserted = utilities.update_sales_order_data_from_fishbowl(fishbowl_database=self.fishbowl_database,
