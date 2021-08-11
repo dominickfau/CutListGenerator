@@ -1,9 +1,19 @@
-import logging
+import os
 
-from cutlistgenerator.database.fishbowldatabase import FishbowlDatabaseConnection
-from cutlistgenerator.database.cutlistdatabase import CutListDatabase
-from cutlistgenerator.appdataclasses import Product, SalesOrder, SalesOrderItem
+from .database.fishbowldatabase import FishbowlDatabaseConnection
+from .database.cutlistdatabase import CutListDatabase
+from .appdataclasses.product import Product
+from .appdataclasses.salesorder import SalesOrder, SalesOrderItem
+from .logging import FileLogger
 
+
+logger = FileLogger(__name__)
+
+def touch(path):
+    """This is the python equivalent of touch. It creates the file if it doesn't exist and updates the timestamp."""
+
+    with open(path, 'a'):
+        os.utime(path, None)
 
 def add(cut_list_database,
         current_fishbowl_sales_order,
@@ -36,6 +46,8 @@ def add(cut_list_database,
 
 def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseConnection, cut_list_database: CutListDatabase):
     # TODO: Add ability to update sales order from fishbowl.
+
+    logger.info("Updating sales order data from fishbowl")
 
     fishbowl_data = fishbowl_database.get_all_open_sales_order_items()
 
@@ -116,6 +128,5 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
                 fishbowl_qty_fulfilled,
                 fishbowl_child_part_qty_multiple)
 
-  
-    print(f"{rows_inserted} rows inserted from a total of {total_rows} rows.")
+    logger.info(f"{rows_inserted} rows inserted from a total of {total_rows} rows.")
     return total_rows, rows_inserted

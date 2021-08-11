@@ -1,9 +1,14 @@
 from . import *
-from .cutlistdatabase import CutListDatabase
 
+from .cutlistdatabase import CutListDatabase
+from cutlistgenerator.logging import FileLogger
+
+logger = FileLogger(__name__)
 
 class MySQLDatabaseConnection(CutListDatabase):
     """MySQL Database Connection for the cut list database."""
+
+    # TODO: Check if all methods below are apart of the CutListDatabase interface.
 
     def connect(self):
         self.connection = mysql.connector.connect(**self.connection_args)
@@ -19,6 +24,17 @@ class MySQLDatabaseConnection(CutListDatabase):
         if self.connection:
             self.connection.close()
             self.connection = None
+    
+    def create(self):
+        """Create the database"""
+        
+        cursor = self.__get_cursor(dictionary=False)
+        # cursor.execute("SELECT database() AS selected_database;")
+        # selected_database = cursor.fetchone()['selected_database']
+
+        cursor.execute("SHOW tables;")
+        tables = [table for (table,) in cursor.fetchall()]
+
 
     def get_current_version(self) -> dict:
         cursor = self.__get_cursor()
@@ -560,5 +576,65 @@ class MySQLDatabaseConnection(CutListDatabase):
 
         cursor = self.__get_cursor()
         cursor.execute("DELETE FROM cut_job WHERE id = %(id)s", values)
+        cursor.execute("COMMIT;")
+        cursor.close()
+
+    # System Properties methods
+    def get_all_system_properties(self) -> List[dict]:
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM system_property")
+        system_properties = cursor.fetchall()
+        cursor.close()
+        if not system_properties:
+            return []
+        return system_properties
+    
+    def get_system_property_by_name(self, name: str) -> dict:
+        values = {
+            'name': name
+        }
+
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM system_property WHERE name = %(name)s", values)
+        system_property = cursor.fetchone()
+        cursor.close()
+        if not system_property:
+            return None
+        return system_property
+
+    def save_system_property(self, system_property) -> int:
+        values = {
+            'system_key': system_property.system_key,
+            'system_value': system_property.system_value,
+            'date_last_modified': system_property.date_last_modified,
+            'read_allowed': system_property.read_allowed,
+            'write_allowed': system_property.write_allowed,
+            'id': system_property.id
+        }
+
+        cursor = self.__get_cursor()
+        if system_property.id is None:
+            cursor.execute("""INSERT INTO system_property (system_key, system_value, date_last_modified, read_allowed, write_allowed)
+                                VALUES(%(system_key)s, %(system_value)s,%(date_last_modified)s, %(read_allowed)s, %(write_allowed)s)""", values)
+            system_property_id = cursor.lastrowid
+        else:
+            cursor.execute("""UPDATE system_property
+                                SET system_key = %(system_key)s, system_value = %(system_value)s,
+                                date_last_modified = %(date_last_modified)s,
+                                read_allowed = %(read_allowed)s,
+                                write_allowed = %(write_allowed)s
+                                WHERE id = %(id)s""", values)
+            system_property_id = values["id"]
+        cursor.execute("COMMIT;")
+        cursor.close()
+        return system_property_id
+
+    def delete_system_property(self, system_property) -> None:
+        values = {
+            'id': system_property.id
+        }
+
+        cursor = self.__get_cursor()
+        cursor.execute("DELETE FROM system_property WHERE id = %(id)s", values)
         cursor.execute("COMMIT;")
         cursor.close()

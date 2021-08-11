@@ -1,6 +1,6 @@
 from . import dataclass
 from . import CutListDatabase
-from . import ProductNotInKitException
+from cutlistgenerator.error import ProductNotInKitError
 
 
 @dataclass
@@ -20,7 +20,7 @@ class Product:
         """Initialize the product after it's been created."""
         
         if self.kit_flag and self.parent_kit_product is None:
-            raise ProductNotInKitException("Product is marked as a kit but does not have a parent kit product.")
+            raise ProductNotInKitError("Product is marked as a kit but does not have a parent kit product.")
 
         if self.unit_price_dollars is None:
             self.unit_price_dollars = 0.0

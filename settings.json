@@ -1,23 +1,23 @@
 {
-    "Fishbowl_MySQL":
-    {
+    "General_Settings": {
+        "logging_level": "INFO"
+    },
+    "Fishbowl_MySQL": {
         "auth": {
-            "host": "192.168.1.107",
+            "host": "127.0.0.1",
             "port": 3306,
             "user": "gone",
             "password": "fishing",
             "database": "qes"
         }
     },
-    "CutList_MySQL":
-    {
+    "CutList_MySQL": {
         "auth": {
-            "host": "192.168.1.107",
+            "host": "127.0.0.1",
             "port": 3306,
             "user": "cutlist",
             "password": "Letmein2021",
-            "database": "cutlistgenerator_test",
-            "autocommit": true
+            "database": "cutlistgenerator_test"
         }
     }
 }

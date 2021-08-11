@@ -1,8 +1,14 @@
-from . import *
+from . import abstractmethod, List
+from . import Database
 
 
 class CutListDatabase(Database):
     """Base class for CutList Databases"""
+
+    @abstractmethod
+    def create(self):
+        """Create the database"""
+        pass
 
     # Product methods
     @abstractmethod
@@ -163,4 +169,25 @@ class CutListDatabase(Database):
     @abstractmethod
     def delete_cut_job(self, cut_job) -> None:
         """Delete cut job."""
+        pass
+
+    # System Properties methods
+    @abstractmethod
+    def get_all_system_properties(self) -> List[dict]:
+        """Get all system properties. Returns empty list if not found."""
+        pass
+    
+    @abstractmethod
+    def get_system_property_by_name(self, name: str) -> dict:
+        """Get system property by name. Returns None if not found."""
+        pass
+
+    @abstractmethod
+    def save_system_property(self, system_property) -> int:
+        """Save system property. Returns id of saved system property."""
+        pass
+
+    @abstractmethod
+    def delete_system_property(self, system_property) -> None:
+        """Delete system property."""
         pass

@@ -1,5 +1,9 @@
 from . import *
 
+from cutlistgenerator.logging import FileLogger
+
+logger = FileLogger(__name__)
+
 
 class FishbowlDatabaseConnection(Database):
     """MySQL database connection to a Fishbowl database."""
@@ -28,6 +32,11 @@ class FishbowlDatabaseConnection(Database):
         return self.connection.cursor(buffered, raw, prepared, cursor_class, dictionary, named_tuple)
 
     def get_all_open_sales_order_items(self) -> List[dict]:
+        """Returns a list of dictionaries containing the sales order number, product number,
+        and product name for all open sales order items."""
+
+        logger.info("[FISHBOWL] Searching for open sales orders.")
+
         cursor = self.__get_cursor()
         cursor.execute("""
                 SELECT so.num AS so_number,
@@ -66,13 +75,16 @@ class FishbowlDatabaseConnection(Database):
         data = cursor.fetchall()
         cursor.close()
         if not data:
+            logger.info("[FISHBOWL] No open sales order items found.")
             return []
+        logger.info(f"[FISHBOWL] Found {len(data)} open sales order items.")
         return data
     
     def get_kit_items_for_product_number(self, product_number: str) -> List[dict]:
         """Finds all the kit items for a product number. Returns a list of dictionaries
             with the child_part_number, and child_part_qty as keys."""
 
+        logger.debug(f"[FISHBOWL] Searching for child kit items for product number {product_number}.")
         kit_items = []
 
         cursor = self.__get_cursor()
@@ -101,7 +113,9 @@ class FishbowlDatabaseConnection(Database):
         kit_items = cursor.fetchall()
         cursor.close()
         if not kit_items:
+            logger.debug(f"[FISHBOWL] No child kit items found for product number {product_number}.")
             return []
+        logger.debug(f"[FISHBOWL] Found {len(kit_items)} child kit items for product number {product_number}.")
         return kit_items
 
     def get_kit_items_for_product_number_recursively(self, product_number: str) -> List[dict]:
@@ -131,6 +145,7 @@ class FishbowlDatabaseConnection(Database):
     def get_product_data_from_number(self, product_number: str) -> dict:
         """Gets product data for a product number. Returns a dictionary with the product number, description, and unit price. Returns None if no product is found."""
         
+        logger.debug(f"[FISHBOWL] Searching for product data for product number {product_number}.")
         values = {
             'product_number': product_number
         }
@@ -148,5 +163,7 @@ class FishbowlDatabaseConnection(Database):
         product_data = cursor.fetchone()
         cursor.close()
         if not product_data:
+            logger.debug(f"[FISHBOWL] No product data found for product number {product_number}.")
             return None
+        logger.debug(f"[FISHBOWL] Found product data for product number {product_number}.")
         return product_data
