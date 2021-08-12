@@ -4,6 +4,7 @@ from .database.fishbowldatabase import FishbowlDatabaseConnection
 from .database.cutlistdatabase import CutListDatabase
 from .appdataclasses.product import Product
 from .appdataclasses.salesorder import SalesOrder, SalesOrderItem
+from .appdataclasses.systemproperty import SystemProperty
 from .logging import FileLogger
 
 
@@ -47,7 +48,7 @@ def add(cut_list_database,
 def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseConnection, cut_list_database: CutListDatabase):
     # TODO: Add ability to update sales order from fishbowl.
 
-    logger.info("Updating sales order data from fishbowl")
+    logger.info("Updating sales order data from fishbowl.")
 
     fishbowl_data = fishbowl_database.get_all_open_sales_order_items()
 
@@ -130,3 +131,13 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
 
     logger.info(f"{rows_inserted} rows inserted from a total of {total_rows} rows.")
     return total_rows, rows_inserted
+
+
+def create_default_system_properties(database_connection: CutListDatabase):
+    pass
+    # logger.info("Creating default system properties.")
+
+    # SystemProperty(database_connection=database_connection,
+    #                 property_name="auto_update_fishbowl_sales_orders",
+    #                 property_value=True,
+    #                 visible=True).save()

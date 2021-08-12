@@ -3,14 +3,14 @@ from . import datetime, dataclass, CutListDatabase
 
 @dataclass
 class SystemProperty:
-    """Represents a system property."""
+    """Represents a system property. Defaults to not visible and not read only."""
 
     database_connection: CutListDatabase
-    system_key: str
-    system_value: str
+    name: str
+    value: str
     date_last_modified: datetime.datetime = None
-    read_allowed: bool = False
-    write_allowed: bool = False
+    read_only: bool = False
+    visible: bool = False
     id: int = None
 
     def __post_init__(self):
@@ -22,17 +22,29 @@ class SystemProperty:
     def __repr__(self) -> str:
         """Returns the representation of the system property."""
         
-        return f"SystemProperty(database_connection={self.database_connection}, system_key={self.system_key}, system_value={self.system_value}, date_last_modified={self.date_last_modified}, read_allowed={self.read_allowed}, write_allowed={self.write_allowed}, id={self.id})"
+        return f"SystemProperty(database_connection={self.database_connection}, name={self.name}, value={self.value}, date_last_modified={self.date_last_modified}, read_only={self.read_only}, visible={self.visible}, id={self.id})"
     
     def __str__(self) -> str:
         """Returns the string representation of the system property."""
-        return f"{self.system_key} = {self.system_value}"
+        return f"{self.name} = {self.value}"
     
     def set_value(self, value: str) -> None:
         """Sets the system property's value."""
 
-        self.system_value = value
+        self.value = value
         self.date_last_modified = datetime.datetime.now()
+        self.save()
+    
+    def set_read_only(self, read_only: bool) -> None:
+        """Sets the system property's read only status for the end user."""
+
+        self.read_only = read_only
+        self.save()
+    
+    def set_visible(self, visible: bool) -> None:
+        """Sets the system property's visibility to the end user."""
+        
+        self.visible = visible
         self.save()
 
     def save(self) -> None:

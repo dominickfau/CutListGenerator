@@ -582,7 +582,7 @@ class MySQLDatabaseConnection(CutListDatabase):
     # System Properties methods
     def get_all_system_properties(self) -> List[dict]:
         cursor = self.__get_cursor()
-        cursor.execute("SELECT * FROM system_property")
+        cursor.execute("SELECT * FROM system_properties")
         system_properties = cursor.fetchall()
         cursor.close()
         if not system_properties:
@@ -595,7 +595,7 @@ class MySQLDatabaseConnection(CutListDatabase):
         }
 
         cursor = self.__get_cursor()
-        cursor.execute("SELECT * FROM system_property WHERE name = %(name)s", values)
+        cursor.execute("SELECT * FROM system_properties WHERE name = %(name)s", values)
         system_property = cursor.fetchone()
         cursor.close()
         if not system_property:
@@ -604,25 +604,25 @@ class MySQLDatabaseConnection(CutListDatabase):
 
     def save_system_property(self, system_property) -> int:
         values = {
-            'system_key': system_property.system_key,
-            'system_value': system_property.system_value,
+            'name': system_property.name,
+            'value': system_property.value,
             'date_last_modified': system_property.date_last_modified,
-            'read_allowed': system_property.read_allowed,
-            'write_allowed': system_property.write_allowed,
+            'read_only': system_property.read_only,
+            'visible': system_property.visible,
             'id': system_property.id
         }
 
         cursor = self.__get_cursor()
         if system_property.id is None:
-            cursor.execute("""INSERT INTO system_property (system_key, system_value, date_last_modified, read_allowed, write_allowed)
-                                VALUES(%(system_key)s, %(system_value)s,%(date_last_modified)s, %(read_allowed)s, %(write_allowed)s)""", values)
+            cursor.execute("""INSERT INTO system_properties (name, value, date_last_modified, read_only, visible)
+                                VALUES(%(name)s, %(value)s,%(date_last_modified)s, %(read_only)s, %(visible)s)""", values)
             system_property_id = cursor.lastrowid
         else:
-            cursor.execute("""UPDATE system_property
-                                SET system_key = %(system_key)s, system_value = %(system_value)s,
+            cursor.execute("""UPDATE system_properties
+                                SET name = %(name)s, value = %(system_value)s,
                                 date_last_modified = %(date_last_modified)s,
-                                read_allowed = %(read_allowed)s,
-                                write_allowed = %(write_allowed)s
+                                read_only = %(read_only)s,
+                                visible = %(visible)s
                                 WHERE id = %(id)s""", values)
             system_property_id = values["id"]
         cursor.execute("COMMIT;")
@@ -635,6 +635,6 @@ class MySQLDatabaseConnection(CutListDatabase):
         }
 
         cursor = self.__get_cursor()
-        cursor.execute("DELETE FROM system_property WHERE id = %(id)s", values)
+        cursor.execute("DELETE FROM system_properties WHERE id = %(id)s", values)
         cursor.execute("COMMIT;")
         cursor.close()
