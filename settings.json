@@ -1,6 +1,7 @@
 {
     "General_Settings": {
-        "logging_level": "INFO"
+        "logging_level": "INFO",
+        "database_setup": true
     },
     "Fishbowl_MySQL": {
         "auth": {

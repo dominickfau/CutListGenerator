@@ -1,11 +1,12 @@
 import json
 import os
 
-from cutlistgenerator.error import InvalidSettingsFilePathError, InvalidSettingsFileError
+from .error import InvalidSettingsFilePathError, InvalidSettingsFileError
 
 DEFULT_SETTINGS = {
     "General_Settings": {
-        "logging_level": "INFO"
+        "logging_level": "INFO",
+        "database_setup": False
     },
     "Fishbowl_MySQL":
     {
@@ -46,6 +47,22 @@ class Settings:
             "Fishbowl_MySQL": self._fishbowl_settings,
             "CutList_MySQL": self._cutlist_settings
         }
+    
+    def is_database_setup(self) -> bool:
+        """Check if database is setup."""
+        
+        return self._generate_settings["database_setup"]
+    
+    def set_database_setup(self, value: bool) -> None:
+        """Set database setup."""
+
+        self._generate_settings["database_setup"] = value
+        self.save()
+    
+    def get_logging_level(self) -> str:
+        """Get logging level."""
+        
+        return self._generate_settings["logging_level"]
     
     def load_default_settings(self) -> None:
         """Loads default settings."""
