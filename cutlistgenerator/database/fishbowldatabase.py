@@ -69,7 +69,6 @@ class FishbowlDatabaseConnection(Database):
                 WHERE soitem.statusId < 50 -- 50 = Finished
                 AND (soitem.qtyToFulfill - qtyPicked - qtyFulfilled) > 0
                 -- AND DATE_SUB(so.dateFirstShip, INTERVAL 14 DAY) < NOW()
-                AND product.num LIKE "50%"
                 AND productuom.code = "ea";
         """)
         data = cursor.fetchall()
