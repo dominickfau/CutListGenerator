@@ -49,7 +49,7 @@ class Application(QtWidgets.QMainWindow):
             logger.info("[DATABASE] Setting up database.")
             # TODO: Add a dialog to infrom the user that they need to setup the database.
             # TODO: Create a function to setup the database.
-            utilities.create_default_system_properties(self.cut_list_generator_database)
+            utilities.create_database(self.cut_list_generator_database)
             self.settings.set_database_setup(True)
             logger.info("[DATABASE] Database setup complete.")
         

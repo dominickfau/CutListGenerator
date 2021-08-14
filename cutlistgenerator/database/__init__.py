@@ -13,7 +13,7 @@ class Database:
         self.connection_args = connection_args
     
     @abstractmethod
-    def create(self):
+    def create(self, force_remove_old_data: bool = False) -> None:
         """Create the Database"""
         pass
 

@@ -190,3 +190,10 @@ def create_default_system_properties(database_connection: CutListDatabase):
                         name="exclude_sales_order_products_starting_with",
                         value=["BC-"],
                         visible=True).save()
+    
+    logger.info("[SYSTEM PROPERTY] Default system properties created.")
+
+def create_database(database_connection: CutListDatabase):
+    database_connection.create()
+    logger.info("[DATABASE] Adding default data to tables.")
+    create_default_system_properties(database_connection)
