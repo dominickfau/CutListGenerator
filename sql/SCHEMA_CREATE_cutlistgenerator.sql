@@ -2,6 +2,19 @@ DROP DATABASE IF EXISTS `cutlistgenerator_test`;
 CREATE DATABASE `cutlistgenerator_test` /*!40100 DEFAULT CHARACTER SET utf8 */;
 USE `cutlistgenerator_test`;
 
+CREATE TABLE `system_properties` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `date_last_modified` datetime(6) DEFAULT NULL,
+  `read_only` bit(1) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `value` varchar(1024) NOT NULL,
+  `visible` bit(1) NOT NULL,
+  `value_type` varchar(45) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `UK_osp7t6r0heujnkqu21sxoqhgd` (`name`),
+  KEY `sysPropertiesSysKeyIdx` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE `database_version` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `date_updated` datetime(6) DEFAULT NULL,
