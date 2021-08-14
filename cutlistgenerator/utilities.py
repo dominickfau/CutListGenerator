@@ -48,10 +48,12 @@ def add(cut_list_database,
 def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseConnection, cut_list_database: CutListDatabase):
     # TODO: Add ability to update sales order from fishbowl.
 
+    # IMPROVE: Find a more efficient way to do this.
+
     logger.info("Updating sales order data from fishbowl.")
 
     fishbowl_data = fishbowl_database.get_all_open_sales_order_items()
-
+    add_parent_products = SystemProperty.find_by_name(database_connection=cut_list_database, name="add_parent_products_to_sales_orders").value
     rows_inserted = 0
     rows_updated = 0
     total_rows = len(fishbowl_data)
@@ -131,16 +133,27 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
                         fishbowl_qty_fulfilled,
                         fishbowl_child_part_qty_multiple)
 
+        if add_parent_products and fishbowl_product.kit_flag:
+            rows_inserted += add(cut_list_database,
+                    current_fishbowl_sales_order,
+                    fishbowl_product,
+                    fishbowl_line_number,
+                    fishbowl_due_date,
+                    fishbowl_qty_to_fulfill,
+                    fishbowl_qty_picked,
+                    fishbowl_qty_fulfilled,
+                    fishbowl_child_part_qty_multiple)
 
-        rows_inserted += add(cut_list_database,
-                current_fishbowl_sales_order,
-                fishbowl_product,
-                fishbowl_line_number,
-                fishbowl_due_date,
-                fishbowl_qty_to_fulfill,
-                fishbowl_qty_picked,
-                fishbowl_qty_fulfilled,
-                fishbowl_child_part_qty_multiple)
+        elif len(fishbowl_child_parts) == 0:
+            rows_inserted += add(cut_list_database,
+                    current_fishbowl_sales_order,
+                    fishbowl_product,
+                    fishbowl_line_number,
+                    fishbowl_due_date,
+                    fishbowl_qty_to_fulfill,
+                    fishbowl_qty_picked,
+                    fishbowl_qty_fulfilled,
+                    fishbowl_child_part_qty_multiple)
 
     logger.info(f"{rows_inserted} rows inserted from a total of {total_rows} rows.")
     return total_rows, rows_inserted
