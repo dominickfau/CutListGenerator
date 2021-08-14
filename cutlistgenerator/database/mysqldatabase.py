@@ -2,7 +2,7 @@ from . import *
 
 from .cutlistdatabase import CutListDatabase
 from cutlistgenerator.logging import FileLogger
-from .mysqldatabasecreate import TABLE_DATA
+# from .mysqldatabasecreate import TABLE_DATA
 
 logger = FileLogger(__name__)
 
@@ -28,32 +28,33 @@ class MySQLDatabaseConnection(CutListDatabase):
     
     def create(self, force_remove_old_data: bool = False) -> None:
         """Create the database"""
-        logger.info("[DATABASE] Creating database.")
-        cursor = self.__get_cursor(dictionary=False)
-        # cursor.execute("SELECT database() AS selected_database;")
-        # selected_database = cursor.fetchone()['selected_database']
+        pass
+        # logger.info("[DATABASE] Creating database.")
+        # cursor = self.__get_cursor(dictionary=False)
+        # # cursor.execute("SELECT database() AS selected_database;")
+        # # selected_database = cursor.fetchone()['selected_database']
 
-        cursor.execute("SHOW tables;")
-        tables = [table for (table,) in cursor.fetchall()]
-        logger.info(f"[DATABASE] Current tables: {tables}")
+        # cursor.execute("SHOW tables;")
+        # tables = [table for (table,) in cursor.fetchall()]
+        # logger.info(f"[DATABASE] Current tables: {tables}")
 
-        if force_remove_old_data:
-            logger.warning("[DATABASE] Forcing removal of old tables. Any data in the database will be lost.")
+        # if force_remove_old_data:
+        #     logger.warning("[DATABASE] Forcing removal of old tables. Any data in the database will be lost.")
 
-            for table in tables:
-                logger.debug(f"[DATABASE] Dropping table {table}.")
-                cursor.execute(f"DROP TABLE {table};")
-                cursor.execute("COMMIT;")
+        #     for table in tables:
+        #         logger.debug(f"[DATABASE] Dropping table {table}.")
+        #         cursor.execute(f"DROP TABLE {table};")
+        #         cursor.execute("COMMIT;")
 
-        logger.info("[DATABASE] Creating tables.")
-        for table in TABLE_DATA:
-            if table not in tables:
-                logger.debug(f"[DATABASE] Creating table: {table}")
-                cursor.execute(TABLE_DATA[table]['create'])
-                cursor.execute("COMMIT;")
+        # logger.info("[DATABASE] Creating tables.")
+        # for table in TABLE_DATA:
+        #     if table not in tables:
+        #         logger.debug(f"[DATABASE] Creating table: {table}")
+        #         cursor.execute(TABLE_DATA[table]['create'])
+        #         cursor.execute("COMMIT;")
         
-        logger.info(f"[DATABASE] All tables created. Total: {len(TABLE_DATA)}")
-        logger.info("[DATABASE] Database created.")
+        # logger.info(f"[DATABASE] All tables created. Total: {len(TABLE_DATA)}")
+        # logger.info("[DATABASE] Database created.")
 
 
     def get_current_version(self) -> dict:

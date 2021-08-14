@@ -2,6 +2,7 @@ from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 import sys, os, traceback, datetime
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMessageBox
+# from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
 
 import cutlistgenerator
@@ -52,17 +53,16 @@ class Application(QtWidgets.QMainWindow):
             utilities.create_database(self.cut_list_generator_database)
             self.settings.set_database_setup(True)
             logger.info("[DATABASE] Database setup complete.")
-        
 
-        # self.cut_list_generator_database.create()
-
-        # self.ui.actionGet_Sales_Order_Data.triggered.connect(self.get_current_fb_data)
-
+        self.ui.actionGet_Current_SO_Data_From_Fishbowl.triggered.connect(self.get_current_fb_data)
+        auto_update_fishbowl_so_data = SystemProperty.find_by_name(self.cut_list_generator_database, "fishbowl_auto_update_sales_orders")
+        # if auto_update_fishbowl_so_data.value:
+        #     logger.info("[AUTO UPDATE] Auto updating sales order data from Fishbowl.")
+        #     self.get_current_fb_data()
 
     def get_current_fb_data(self):
         start_time = datetime.datetime.now()
-        total_rows, rows_inserted = utilities.update_sales_order_data_from_fishbowl(fishbowl_database=self.fishbowl_database,
-                                                        cut_list_database=self.cut_list_generator_database)
+        total_rows, rows_inserted = utilities.update_sales_order_data_from_fishbowl(self.fishbowl_database, self.cut_list_database)
         end_time = datetime.datetime.now()
         time_delta = end_time - start_time
         logger.info(f"[EXECUTION TIME]: {time_delta.total_seconds() *1000} ms")
