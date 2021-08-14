@@ -134,10 +134,18 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
 
 
 def create_default_system_properties(database_connection: CutListDatabase):
-    pass
-    # logger.info("Creating default system properties.")
+    logger.info("[SYSTEM PROPERTY] Creating default system properties.")
 
-    # SystemProperty(database_connection=database_connection,
-    #                 property_name="auto_update_fishbowl_sales_orders",
-    #                 property_value=True,
-    #                 visible=True).save()
+    if not SystemProperty.find_by_name(database_connection=database_connection, name="fishbowl_auto_update_sales_orders"):
+        logger.info("[SYSTEM PROPERTY] Adding default system property 'fishbowl_auto_update_sales_orders'.")
+        SystemProperty(database_connection=database_connection,
+                        name="fishbowl_auto_update_sales_orders",
+                        value=True,
+                        visible=True).save()
+    
+    if not SystemProperty.find_by_name(database_connection=database_connection, name="add_parent_products_to_sales_orders"):
+        logger.info("[SYSTEM PROPERTY] Adding default system property 'add_parent_products_to_sales_orders'.")
+        SystemProperty(database_connection=database_connection,
+                        name="add_parent_products_to_sales_orders",
+                        value=False,
+                        visible=True).save()

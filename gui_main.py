@@ -1,3 +1,4 @@
+from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 import sys, os, traceback, datetime
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMessageBox
@@ -52,7 +53,7 @@ class Application(QtWidgets.QMainWindow):
             self.settings.set_database_setup(True)
             logger.info("[DATABASE] Database setup complete.")
         
-        
+        print(SystemProperty.find_by_name(self.cut_list_generator_database, name="add_parent_products_to_sales_orders"))
 
         # self.cut_list_generator_database.create()
 

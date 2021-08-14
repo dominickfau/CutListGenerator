@@ -1,0 +1,23 @@
+2021-08-14 03:59:04,419 : INFO : __main__ : [START] Starting application.
+2021-08-14 03:59:04,419 : INFO : __main__ : Program Version: 0.1.0
+2021-08-14 03:59:04,878 : INFO : __main__ : Loading settings from file: settings.json
+2021-08-14 03:59:04,878 : INFO : __main__ : [DATABASE] Setting up database.
+2021-08-14 03:59:04,878 : INFO : cutlistgenerator.utilities : Creating default system properties.
+2021-08-14 03:59:04,932 : INFO : cutlistgenerator.utilities : Adding default system property 'fishbowl_auto_update_sales_orders'.
+2021-08-14 03:59:04,938 : INFO : cutlistgenerator.utilities : Adding default system property 'add_parent_products_to_sales_orders'.
+2021-08-14 03:59:04,942 : INFO : __main__ : [DATABASE] Database setup complete.
+2021-08-14 03:59:06,616 : INFO : __main__ : [END] Closing application.
+2021-08-14 04:02:39,776 : INFO : __main__ : [START] Starting application.
+2021-08-14 04:02:39,776 : INFO : __main__ : Program Version: 0.1.0
+2021-08-14 04:02:40,232 : INFO : __main__ : Loading settings from file: settings.json
+2021-08-14 04:02:40,286 : INFO : __main__ : [DATABASE] Setting up database.
+2021-08-14 04:02:40,287 : INFO : cutlistgenerator.utilities : [SYSTEM PROPERTY] Creating default system properties.
+2021-08-14 04:02:40,289 : INFO : __main__ : [DATABASE] Database setup complete.
+2021-08-14 04:02:41,931 : INFO : __main__ : [END] Closing application.
+2021-08-14 04:08:05,270 : INFO : __main__ : [START] Starting application.
+2021-08-14 04:08:05,270 : INFO : __main__ : Program Version: 0.1.0
+2021-08-14 04:08:05,758 : INFO : __main__ : Loading settings from file: settings.json
+2021-08-14 04:08:05,760 : INFO : __main__ : [DATABASE] Setting up database.
+2021-08-14 04:08:05,760 : INFO : cutlistgenerator.utilities : [SYSTEM PROPERTY] Creating default system properties.
+2021-08-14 04:08:05,817 : INFO : __main__ : [DATABASE] Database setup complete.
+2021-08-14 04:08:09,449 : INFO : __main__ : [END] Closing application.
