@@ -55,6 +55,7 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
     rows_inserted = 0
     rows_updated = 0
     total_rows = len(fishbowl_data)
+    products_to_skip = SystemProperty.find_by_name(database_connection=cut_list_database, name="exclude_sales_order_products_starting_with").value
 
     for row in fishbowl_data:
         fishbowl_so_number = row['so_number']
@@ -72,7 +73,19 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
         fishbowl_child_parts = fishbowl_database.get_kit_items_for_product_number(fishbowl_product_number)
         fishbowl_child_part_qty_multiple = 1.0
         current_fishbowl_sales_order = SalesOrder.find_by_number(database_connection=cut_list_database, number=fishbowl_so_number)
+        to_skip = False
 
+        # Check if the product is in the exclude list.
+        # TODO: Find a better way to do this?
+        for item in products_to_skip:
+            if fishbowl_product_number.startswith(item):
+                logger.info(f"Skipping product number: {fishbowl_product_number}")
+                to_skip = True
+                break
+        
+        # If the product is in the exclude list, skip it.
+        if to_skip:
+            continue
 
         if not current_fishbowl_sales_order:
             current_fishbowl_sales_order = SalesOrder(database_connection=cut_list_database,
@@ -136,6 +149,14 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
 def create_default_system_properties(database_connection: CutListDatabase):
     logger.info("[SYSTEM PROPERTY] Creating default system properties.")
 
+    if not SystemProperty.find_by_name(database_connection=database_connection, name="list_to_string_delimiter"):
+        logger.info("[SYSTEM PROPERTY] Adding default system property 'list_to_string_delimiter'.")
+        SystemProperty(database_connection=database_connection,
+                        name="list_to_string_delimiter",
+                        value=", ",
+                        read_only=True,
+                        visible=True).save()
+
     if not SystemProperty.find_by_name(database_connection=database_connection, name="fishbowl_auto_update_sales_orders"):
         logger.info("[SYSTEM PROPERTY] Adding default system property 'fishbowl_auto_update_sales_orders'.")
         SystemProperty(database_connection=database_connection,
@@ -148,4 +169,11 @@ def create_default_system_properties(database_connection: CutListDatabase):
         SystemProperty(database_connection=database_connection,
                         name="add_parent_products_to_sales_orders",
                         value=False,
+                        visible=True).save()
+    
+    if not SystemProperty.find_by_name(database_connection=database_connection, name="exclude_sales_order_products_starting_with"):
+        logger.info("[SYSTEM PROPERTY] Adding default system property 'exclude_sales_order_products_starting_with'.")
+        SystemProperty(database_connection=database_connection,
+                        name="exclude_sales_order_products_starting_with",
+                        value=["BC-"],
                         visible=True).save()

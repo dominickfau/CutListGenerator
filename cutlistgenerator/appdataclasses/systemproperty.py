@@ -35,6 +35,7 @@ class SystemProperty:
         data = database_connection.get_system_property_by_name(name)
         if not data:
             return None
+        data.pop('value_type', None)
         return SystemProperty(database_connection=database_connection, **data)
     
     def set_value(self, value: str) -> None:

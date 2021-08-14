@@ -600,29 +600,51 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.close()
         if not system_property:
             return None
+        
+        # Convert value from string to type stored in value_type column.
+        if system_property["value_type"] == "int":
+            system_property["value"] = int(system_property["value"])
+        elif system_property["value_type"] == "float":
+            system_property["value"] = float(system_property["value"])
+        elif system_property["value_type"] == "bool":
+            system_property["value"] = bool(system_property["value"])
+        elif system_property["value_type"] == "str":
+            system_property["value"] = str(system_property["value"])
+        elif system_property["value_type"] == "list":
+            delimiter = self.get_system_property_by_name("list_to_string_delimiter")["value"]
+            system_property["value"] = [item.strip() for item in system_property["value"].split(delimiter)]
+        else:
+            logger.warning(f"No type conversion for system property {system_property['name']} with value_type {system_property['value_type']}. Defaulting to str.")
         return system_property
 
     def save_system_property(self, system_property) -> int:
+        value_type = type(system_property.value).__name__
+        if isinstance(system_property.value, list):
+            delimiter = self.get_system_property_by_name("list_to_string_delimiter")["value"]
+            system_property.value = delimiter.join(system_property.value)
+
         values = {
             'name': system_property.name,
             'value': system_property.value,
             'date_last_modified': system_property.date_last_modified,
             'read_only': system_property.read_only,
             'visible': system_property.visible,
+            'value_type': value_type,
             'id': system_property.id
         }
 
         cursor = self.__get_cursor()
         if system_property.id is None:
-            cursor.execute("""INSERT INTO system_properties (name, value, date_last_modified, read_only, visible)
-                                VALUES(%(name)s, %(value)s,%(date_last_modified)s, %(read_only)s, %(visible)s)""", values)
+            cursor.execute("""INSERT INTO system_properties (name, value, date_last_modified, read_only, visible, value_type)
+                                VALUES(%(name)s, %(value)s,%(date_last_modified)s, %(read_only)s, %(visible)s, %(value_type)s)""", values)
             system_property_id = cursor.lastrowid
         else:
             cursor.execute("""UPDATE system_properties
                                 SET name = %(name)s, value = %(system_value)s,
                                 date_last_modified = %(date_last_modified)s,
                                 read_only = %(read_only)s,
-                                visible = %(visible)s
+                                visible = %(visible)s,
+                                value_type = %(value_type)s
                                 WHERE id = %(id)s""", values)
             system_property_id = values["id"]
         cursor.execute("COMMIT;")
