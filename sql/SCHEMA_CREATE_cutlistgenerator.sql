@@ -102,3 +102,29 @@ CREATE TABLE `parent_to_child_product` (
   CONSTRAINT `FK_guiwjkfijhwjhqwekjfgdsjb` FOREIGN KEY (`child_product_id`) REFERENCES `product` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `FK_hogjqwjhvbjhqwdkjvfdjh` FOREIGN KEY (`parent_product_id`) REFERENCES `product` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `cut_job` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(11) NOT NULL,
+  `related_sales_order_item_id` int(11) DEFAULT NULL,
+  `assigned_wire_cutter_id` int(11) NOT NULL,
+  `qty_cut` decimal(28,9) DEFAULT NULL,
+  `date_cut_start` datetime(6) DEFAULT NULL,
+  `date_cut_end` datetime(6) DEFAULT NULL,
+  `date_termination_start` datetime(6) DEFAULT NULL,
+  `date_termination_end` datetime(6) DEFAULT NULL,
+  `date_splice_start` datetime(6) DEFAULT NULL,
+  `date_splice_end` datetime(6) DEFAULT NULL,
+  `is_cut` bit(1) NOT NULL DEFAULT b'0',
+  `is_spliced` bit(1) NOT NULL DEFAULT b'0',
+  `is_terminated` bit(1) NOT NULL DEFAULT b'0',
+  `is_ready_for_build` bit(1) NOT NULL DEFAULT b'0',
+  PRIMARY KEY (`id`),
+  KEY `FK_feiugebuihadfjhflfbakuhff_idx` (`related_sales_order_item_id`),
+  KEY `FK_herakjhgjhwerjdfvkjejhfg_idx` (`product_id`),
+  KEY `FK_giokjgbkhfkjjhwekjhfkuir_idx` (`assigned_wire_cutter_id`),
+  KEY `IDX_giwkjgkeknfbgidkjg` (`is_cut`,`is_spliced`,`is_terminated`,`is_ready_for_build`),
+  CONSTRAINT `FK_feiugebuihadfjhflfbakuhff` FOREIGN KEY (`related_sales_order_item_id`) REFERENCES `sales_order_item` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `FK_giokjgbkhfkjjhwekjhfkuir` FOREIGN KEY (`assigned_wire_cutter_id`) REFERENCES `wire_cutter` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `FK_herakjhgjhwerjdfvkjejhfg` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

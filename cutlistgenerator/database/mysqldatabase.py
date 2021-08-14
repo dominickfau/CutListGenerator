@@ -628,7 +628,7 @@ class MySQLDatabaseConnection(CutListDatabase):
         elif system_property["value_type"] == "float":
             system_property["value"] = float(system_property["value"])
         elif system_property["value_type"] == "bool":
-            system_property["value"] = bool(system_property["value"])
+            system_property["value"] = bool(int(system_property["value"]))
         elif system_property["value_type"] == "str":
             system_property["value"] = str(system_property["value"])
         elif system_property["value_type"] == "list":

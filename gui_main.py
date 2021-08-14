@@ -1,7 +1,7 @@
 from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 import sys, os, traceback, datetime
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMessageBox, QProgressBar
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSlot, pyqtSignal, QObject
 
 
@@ -39,6 +39,8 @@ class Worker(QRunnable):
         '''
         Initialise the runner function with passed args, kwargs.
         '''
+
+        self.kwargs['progress_signal'] = self.signals.progress
         result = self.fn(*self.args, **self.kwargs)
         self.signals.result.emit(result)
         self.signals.finished.emit()
@@ -60,6 +62,14 @@ class Application(QtWidgets.QMainWindow):
 
         self.settings = cutlistgenerator.program_settings
         self.threadpool = QThreadPool()
+        self.progressBar = QProgressBar()
+
+        self.ui.statusbar.addPermanentWidget(self.progressBar)
+
+        # This is simply to show the bar
+        self.progressBar.setGeometry(30, 40, 200, 25)
+        self.progressBar.setValue(50)
+        self.progressBar.hide()
 
 
         # Create settings file if it doesn't exist
@@ -85,35 +95,46 @@ class Application(QtWidgets.QMainWindow):
             logger.info("[DATABASE] Database setup complete.")
 
         self.ui.actionGet_Current_SO_Data_From_Fishbowl.triggered.connect(self.thread_get_current_fb_data)
-        auto_update_fishbowl_so_data = SystemProperty.find_by_name(self.cut_list_generator_database, "fishbowl_auto_update_sales_orders")
-        # if auto_update_fishbowl_so_data.value:
-        #     logger.info("[AUTO UPDATE] Auto updating sales order data from Fishbowl.")
-        #     self.get_current_fb_data()
+        auto_update_fishbowl_so_data = SystemProperty.find_by_name(self.cut_list_generator_database, "fishbowl_auto_update_sales_orders").value
+        if auto_update_fishbowl_so_data:
+            logger.info("[AUTO UPDATE] Auto updating sales order data from Fishbowl.")
+            self.thread_get_current_fb_data()
+    
+    def update_progess_bar(self, value):
+        self.progressBar.setValue(value)
+
+    def reset_progress_bar(self):
+        self.progressBar.setValue(0)
+        self.progressBar.hide()
 
     def thread_get_current_fb_data(self):
         logger.info("[TREAD] Starting thread to get current sales order data from Fishbowl.")
-        self.ui.statusbar.showMessage("Pulling current sales order data from Fishbowl.")
         self.ui.actionGet_Current_SO_Data_From_Fishbowl.setEnabled(False)
         worker = Worker(fn=self.get_current_fb_data, fishbowl_database=self.fishbowl_database, cut_list_database=self.cut_list_generator_database)
-        worker.signals.finished.connect(lambda: self.ui.statusbar.showMessage("Finished pulling sales order data from Fishbowl."))
         worker.signals.finished.connect(lambda: self.ui.actionGet_Current_SO_Data_From_Fishbowl.setEnabled(True))
-        worker.signals.finished.connect(self.show_fishbowl_update_finished_message_box)
+        worker.signals.result.connect(self.show_fishbowl_update_finished_message_box)
+        worker.signals.finished.connect(self.reset_progress_bar)
+        worker.signals.progress.connect(self.update_progess_bar)
+        self.progressBar.show()
+        self.progressBar.setValue(0)
         self.threadpool.start(worker)
     
     @staticmethod
-    def get_current_fb_data(fishbowl_database, cut_list_database):
+    def get_current_fb_data(fishbowl_database, cut_list_database, progress_signal):
         # TODO: Rework this to enable pySignals to be used.
         start_time = datetime.datetime.now()
-        total_rows, rows_inserted = utilities.update_sales_order_data_from_fishbowl(fishbowl_database, cut_list_database)
+        total_rows, rows_inserted = utilities.update_sales_order_data_from_fishbowl(fishbowl_database, cut_list_database, progress_signal)
         end_time = datetime.datetime.now()
         time_delta = end_time - start_time
         logger.info(f"[EXECUTION TIME]: {time_delta.total_seconds() *1000} ms")
+        return total_rows, rows_inserted
 
-    def show_fishbowl_update_finished_message_box(self):
+    def show_fishbowl_update_finished_message_box(self, result):
         msg = QMessageBox()
         msg.setWindowTitle("Fishbowl")
         msg.setIcon(QMessageBox.Information)
-        msg.setText("Fishbowl data update complete.")
+        msg.setText(f"Fishbowl data update complete.")
+        msg.setInformativeText(f"Total rows available: {result[0]}\nRows inserted: {result[1]}")
 
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec()

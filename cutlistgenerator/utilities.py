@@ -45,7 +45,7 @@ def add(cut_list_database,
         return 1
     return 0
 
-def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseConnection, cut_list_database: CutListDatabase):
+def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseConnection, cut_list_database: CutListDatabase, progress_signal):
     # TODO: Add ability to update sales order from fishbowl.
 
     # IMPROVE: Find a more efficient way to do this.
@@ -54,12 +54,16 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
 
     fishbowl_data = fishbowl_database.get_all_open_sales_order_items()
     add_parent_products = SystemProperty.find_by_name(database_connection=cut_list_database, name="add_parent_products_to_sales_orders").value
+    logger.debug(f"[SYSTEM PROPERTY] add_parent_products_to_sales_orders = {add_parent_products}")
     rows_inserted = 0
     rows_updated = 0
     total_rows = len(fishbowl_data)
     products_to_skip = SystemProperty.find_by_name(database_connection=cut_list_database, name="exclude_sales_order_products_starting_with").value
+    logger.debug(f"[SYSTEM PROPERTY] products_to_skip = {products_to_skip}")
 
-    for row in fishbowl_data:
+    for x, row in enumerate(fishbowl_data, start=1):
+        progress_signal.emit(x / total_rows * 100)
+
         fishbowl_so_number = row['so_number']
         fishbowl_customer_name = row['customer_name']
         fishbowl_unit_price_dollars = row['unit_price_dollars']
