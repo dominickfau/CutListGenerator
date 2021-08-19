@@ -3,16 +3,15 @@ import logging, os
 from cutlistgenerator import program_settings
 
 
-LOG_FILE_NAME = "cutlistgenerator.log"
-LOG_FILE_PATH = os.path.join(os.path.dirname("Cut_List"), LOG_FILE_NAME)
-LOGGING_LEVEL = program_settings.get_logging_level()
-
-
 class FileLogger:
     """Creates a logger."""
 
     def __init__(self, name, file_name=None) -> None:
         """Create a new logger with the given name. Defaults to log level INFO."""
+
+        LOG_FILE_NAME = "cutlistgenerator.log"
+        LOG_FILE_PATH = os.path.join(os.path.dirname("Cut_List"), LOG_FILE_NAME)
+        LOGGING_LEVEL = program_settings.get_logging_level()
 
         self._logger =  logging.getLogger(name)  # Create python logger
 

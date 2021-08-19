@@ -191,3 +191,9 @@ class CutListDatabase(Database):
     def delete_system_property(self, system_property) -> None:
         """Delete system property."""
         pass
+    
+    # Convenience methods
+    @abstractmethod
+    def get_sales_order_table_data(self, search_data: dict) -> List[dict]:
+        """Get table data for the sales order table."""
+        pass

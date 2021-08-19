@@ -1,3 +1,4 @@
+from typing import Optional
 from . import datetime, dataclass
 from . import CutListDatabase
 from .product import Product

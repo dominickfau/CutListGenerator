@@ -90,7 +90,7 @@ class MySQLDatabaseConnection(CutListDatabase):
     
     def get_all_products(self) -> List[dict]:
         cursor = self.__get_cursor()
-        cursor.execute("SELECT * FROM product")
+        cursor.execute("SELECT * FROM product ORDER BY number")
         products = cursor.fetchall()
         cursor.close()
         if not products:
@@ -240,9 +240,9 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.close()
 
     # WireCutter methods
-    def get_wire_cutter_by_name(self, wire_cutter_name: str) -> dict:
+    def get_wire_cutter_by_name(self, name: str) -> dict:
         values = {
-            'wire_cutter_name': wire_cutter_name
+            'name': name
         }
 
         cursor = self.__get_cursor()
@@ -414,13 +414,14 @@ class MySQLDatabaseConnection(CutListDatabase):
             'qty_fulfilled': sales_order_item.qty_fulfilled,
             'qty_picked': sales_order_item.qty_picked,
             'line_number': sales_order_item.line_number,
-            'id': sales_order_item.id
+            'id': sales_order_item.id,
+            'cut_in_full': sales_order_item.cut_in_full
         }
 
         cursor = self.__get_cursor()
         if sales_order_item.id is None:
-            cursor.execute("""INSERT INTO sales_order_item (sales_order_id, due_date, product_id, qty_to_fulfill, qty_fulfilled, qty_picked, line_number)
-                                VALUES(%(sales_order_id)s, %(due_date)s, %(product_id)s, %(qty_to_fulfill)s, %(qty_fulfilled)s, %(qty_picked)s, %(line_number)s)""", values)
+            cursor.execute("""INSERT INTO sales_order_item (sales_order_id, due_date, product_id, qty_to_fulfill, qty_fulfilled, qty_picked, line_number, cut_in_full)
+                                VALUES(%(sales_order_id)s, %(due_date)s, %(product_id)s, %(qty_to_fulfill)s, %(qty_fulfilled)s, %(qty_picked)s, %(line_number)s, %(cut_in_full)s)""", values)
             sales_order_item_id = cursor.lastrowid
         else:
             cursor.execute("""
@@ -431,7 +432,8 @@ class MySQLDatabaseConnection(CutListDatabase):
                 qty_to_fulfill = %(qty_to_fulfill)s,
                 qty_fulfilled =  %(qty_fulfilled)s,
                 qty_picked = %(qty_picked)s,
-                line_number = %(line_number)s
+                line_number = %(line_number)s,
+                cut_in_full = %(cut_in_full)s
                 WHERE id = %(id)s""", values)
             sales_order_item_id = values["id"]
         cursor.execute("COMMIT;")
@@ -533,6 +535,19 @@ class MySQLDatabaseConnection(CutListDatabase):
             if cut_job["product_id"] != data["id"]:
                 continue
             cut_jobs.append(cut_job)
+        return cut_jobs
+    
+    def get_cut_job_by_so_item_id(self, so_item_id: int) -> List[dict]:
+        values = {
+            'so_item_id': so_item_id
+        }
+
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM cut_job WHERE related_sales_order_item_id = %(so_item_id)s", values)
+        cut_jobs = cursor.fetchall()
+        cursor.close()
+        if not cut_jobs:
+            return []
         return cut_jobs
 
     def get_cut_job_by_id(self, id: int) -> dict:
@@ -681,3 +696,40 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.execute("DELETE FROM system_properties WHERE id = %(id)s", values)
         cursor.execute("COMMIT;")
         cursor.close()
+    
+    # Convenience methods
+    def get_sales_order_table_data(self, search_data: dict) -> List[dict]:
+        """Get table data for the sales order table."""
+        cursor = self.__get_cursor()
+        
+
+        if len(search_data) == 0:
+            search_data = {
+                'product_number': "%",
+                'so_number': "%",
+                'cut_in_full': 0,
+            }
+
+        cursor.execute("""SELECT sales_order_item.id AS so_item_id,
+                            DATE_FORMAT(sales_order_item.due_date, "%c-%e-%Y") AS due_date,
+                            sales_order.customer_name AS customer_name,
+                            sales_order.number AS so_number,
+                            product.number AS product_number,
+                            product.description AS product_description,
+                            -- product.unit_price_dollars AS unit_price,
+                            TRIM((sales_order_item.qty_to_fulfill - sales_order_item.qty_fulfilled - sales_order_item.qty_picked))+0 AS qty_left_to_ship,
+                            -- product.uom AS uom,
+                            sales_order_item.line_number AS line_number,
+                            product.kit_flag AS is_child_item,
+                            sales_order_item.cut_in_full AS cut_in_full
+                        FROM sales_order
+                        JOIN sales_order_item ON sales_order_item.sales_order_id = sales_order.id
+                        JOIN product ON sales_order_item.product_id = product.id
+                        WHERE sales_order_item.cut_in_full = %(cut_in_full)s
+                        AND product.number LIKE%(product_number)s
+                        AND sales_order.number LIKE%(so_number)s
+                        ORDER BY product.number, sales_order_item.due_date""", search_data)
+
+        sales_order_table_data = cursor.fetchall()
+        cursor.close()
+        return sales_order_table_data

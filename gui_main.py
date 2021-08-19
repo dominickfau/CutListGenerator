@@ -1,3 +1,4 @@
+from cutlistgenerator.appdataclasses import product
 from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 import sys, os, traceback, datetime
 from PyQt5 import QtWidgets
@@ -6,18 +7,34 @@ from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSlot, pyqtSignal, QObject
 
 
 import cutlistgenerator
-from cutlistgenerator.ui.mainwindow import Ui_MainWindow
+
+# Ui Windows
+from cutlistgenerator.ui.mainwindow_ui import Ui_MainWindow
+from cutlistgenerator.ui.cutjobdialog import CutJobDialog
+
+
 from cutlistgenerator.ui.customwidgets.resizablemessagebox import ResizableMessageBox
 from cutlistgenerator.settings import Settings
 from cutlistgenerator.database.mysqldatabase import MySQLDatabaseConnection
 from cutlistgenerator.database.fishbowldatabase import FishbowlDatabaseConnection
 from cutlistgenerator import utilities
 from cutlistgenerator.logging import FileLogger
+from cutlistgenerator.appdataclasses.cutjob import CutJob
+from cutlistgenerator.appdataclasses.product import Product
 
 
 DEFAULT_SETTINGS_FILE_NAME = "settings.json"
 PROGRAM_NAME = "Cut List Generator"
 __version__ = "0.1.0"
+
+# Create settings file if it doesn't exist
+if not Settings.validate_file_path(DEFAULT_SETTINGS_FILE_NAME):
+    utilities.touch(DEFAULT_SETTINGS_FILE_NAME)
+    cutlistgenerator.program_settings.set_file_path(DEFAULT_SETTINGS_FILE_NAME)
+    cutlistgenerator.program_settings.save()
+else:
+    cutlistgenerator.program_settings.set_file_path(DEFAULT_SETTINGS_FILE_NAME)
+    cutlistgenerator.program_settings.load()
 
 logger = FileLogger(__name__)
 
@@ -60,7 +77,6 @@ class Application(QtWidgets.QMainWindow):
 
         self.setWindowTitle(f"{PROGRAM_NAME} v{__version__}")
 
-        self.settings = cutlistgenerator.program_settings
         self.threadpool = QThreadPool()
         self.progressBar = QProgressBar()
 
@@ -71,35 +87,109 @@ class Application(QtWidgets.QMainWindow):
         self.progressBar.setValue(50)
         self.progressBar.hide()
 
+        self.ui.so_search_push_button.clicked.connect(self.load_so_table_data)
+        self.ui.sales_order_table_widget.doubleClicked.connect(self.on_so_table_row_double_clicked)
 
-        # Create settings file if it doesn't exist
-        if not Settings.validate_file_path(DEFAULT_SETTINGS_FILE_NAME):
-            logger.info(f"Creating settings file: {DEFAULT_SETTINGS_FILE_NAME}")
-            utilities.touch(DEFAULT_SETTINGS_FILE_NAME)
-            self.settings.set_file_path(DEFAULT_SETTINGS_FILE_NAME)
-            self.settings.save()
-        else:
-            logger.info(f"Loading settings from file: {DEFAULT_SETTINGS_FILE_NAME}")
-            self.settings.set_file_path(DEFAULT_SETTINGS_FILE_NAME)
-            self.settings.load()
+        # This auto strips the text when the widget looses focus.
+        self.ui.so_search_product_number_line_edit.editingFinished.connect(lambda: self.ui.so_search_product_number_line_edit.setText(self.ui.so_search_product_number_line_edit.text().strip()))
+        self.ui.so_search_so_number_line_edit.editingFinished.connect(lambda: self.ui.so_search_so_number_line_edit.setText(self.ui.so_search_so_number_line_edit.text().strip()))
 
-        self.fishbowl_database = FishbowlDatabaseConnection(connection_args=self.settings.get_fishbowl_settings()['auth'])
-        self.cut_list_generator_database = MySQLDatabaseConnection(connection_args=self.settings.get_cutlist_settings()['auth'])
+        self.fishbowl_database = FishbowlDatabaseConnection(connection_args=cutlistgenerator.program_settings.get_fishbowl_settings()['auth'])
+        self.cut_list_generator_database = MySQLDatabaseConnection(connection_args=cutlistgenerator.program_settings.get_cutlist_settings()['auth'])
 
-        if not self.settings.is_database_setup():
+        if not cutlistgenerator.program_settings.is_database_setup():
             logger.info("[DATABASE] Setting up database.")
             # TODO: Add a dialog to infrom the user that they need to setup the database.
             # TODO: Create a function to setup the database.
             utilities.create_database(self.cut_list_generator_database)
-            self.settings.set_database_setup(True)
+            cutlistgenerator.program_settings.set_database_setup(True)
             logger.info("[DATABASE] Database setup complete.")
 
-        self.ui.actionGet_Current_SO_Data_From_Fishbowl.triggered.connect(self.thread_get_current_fb_data)
+        self.ui.actionGet_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
         auto_update_fishbowl_so_data = SystemProperty.find_by_name(self.cut_list_generator_database, "fishbowl_auto_update_sales_orders").value
         if auto_update_fishbowl_so_data:
             logger.info("[AUTO UPDATE] Auto updating sales order data from Fishbowl.")
             self.thread_get_current_fb_data()
+        
+        self.load_so_table_data()
+
+    def get_so_search_data(self):
+        include_finished = self.ui.so_search_include_finished_check_box.isChecked()
+        product_number = self.ui.so_search_product_number_line_edit.text().strip()
+        so_number = self.ui.so_search_so_number_line_edit.text().strip()
+
+        if include_finished:
+            include_finished = "%"
+        
+        if len(product_number) == 0:
+            product_number = "%"
+        else:
+            product_number = f"%{product_number}%"
+
+        if len(so_number) == 0:
+            so_number = "%"
+        else:
+            so_number = f"%{so_number}%"
+        
+        logger.debug(f"[SEARCH] Current search parameters. Product Number: '{product_number}' SO Number: '{so_number}'' Show Finished: '{include_finished}'")
+
+        return {'product_number': product_number, 'cut_in_full': include_finished, 'so_number': so_number}
     
+    def on_so_table_row_double_clicked(self, row):
+        row_num = row.row()
+        so_item_id = int(self.ui.sales_order_table_widget.item(row_num, 0).text())
+        product_number = self.ui.sales_order_table_widget.item(row_num, 4).text()
+        product = Product.from_number(self.cut_list_generator_database, product_number)
+        self.load_cut_job_data(so_item_id, product)
+    
+    def load_cut_job_data(self, so_item_id, product: Product):
+        logger.debug(f"[CUT JOB] Loading cut job data for sales order item ID: {so_item_id}'")
+        data = self.cut_list_generator_database.get_cut_job_by_so_item_id(so_item_id)
+        if not data:
+            logger.info(f"[CUT JOB] No cut job data found for sales order item ID: {so_item_id}")
+            msg = QMessageBox()
+            msg.setWindowTitle("Cut Job")
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("The selected sales order item does not have a cut job associated with it. Would you like to create one?")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg.exec()
+            if msg.result() == QMessageBox.Yes:
+                self.create_cut_job(product)
+            return
+    
+    def create_cut_job(self, product: Product):
+        logger.info(f"[CUT JOB] Creating cut job for product: {product.number}")
+        # Open a dialog to get the cut job data.
+        dialog = CutJobDialog(cut_list_generator_database=self.cut_list_generator_database,
+                              fishbowl_database=self.fishbowl_database,
+                              product=product,
+                              parent=self)
+        if dialog.exec():
+            print(dialog.cut_job)
+
+    def clear_table(self, tableWidget):
+        logger.debug("[TABLE] Clearing table.")
+        tableWidget.setRowCount(0)
+
+    def load_so_table_data(self):
+        logger.debug("[SEARCH] Loading SO data into table.")
+        search_data = self.get_so_search_data()
+        self.clear_table(self.ui.sales_order_table_widget)
+
+        table_data = self.cut_list_generator_database.get_sales_order_table_data(search_data)
+        self.ui.sales_order_table_widget.setRowCount(len(table_data))
+        logger.debug(f"[SEARCH] Found {len(table_data)} rows of data.")
+
+        for row_index, row in enumerate(table_data):
+            for column_index, key in enumerate(row):
+                self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(row[key])))
+                if key == "due_date":
+                    self.ui.sales_order_table_widget.setColumnWidth(column_index, 100)
+                elif key == "customer_name":
+                    self.ui.sales_order_table_widget.setColumnWidth(column_index, 200)
+                elif key == "product_description":
+                    self.ui.sales_order_table_widget.setColumnWidth(column_index, 250)
+
     def update_progess_bar(self, value):
         self.progressBar.setValue(value)
 
@@ -109,9 +199,9 @@ class Application(QtWidgets.QMainWindow):
 
     def thread_get_current_fb_data(self):
         logger.info("[TREAD] Starting thread to get current sales order data from Fishbowl.")
-        self.ui.actionGet_Current_SO_Data_From_Fishbowl.setEnabled(False)
+        self.ui.actionGet_Sales_Order_Data.setEnabled(False)
         worker = Worker(fn=self.get_current_fb_data, fishbowl_database=self.fishbowl_database, cut_list_database=self.cut_list_generator_database)
-        worker.signals.finished.connect(lambda: self.ui.actionGet_Current_SO_Data_From_Fishbowl.setEnabled(True))
+        worker.signals.finished.connect(lambda: self.ui.actionGet_Sales_Order_Data.setEnabled(True))
         worker.signals.result.connect(self.show_fishbowl_update_finished_message_box)
         worker.signals.finished.connect(self.reset_progress_bar)
         worker.signals.progress.connect(self.update_progess_bar)

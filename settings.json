@@ -1,6 +1,6 @@
 {
     "General_Settings": {
-        "logging_level": "INFO",
+        "logging_level": "DEBUG",
         "database_setup": true
     },
     "Fishbowl_MySQL": {

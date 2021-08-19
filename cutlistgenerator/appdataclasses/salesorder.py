@@ -16,6 +16,7 @@ class SalesOrderItem:
     line_number: int
     id: int = None
     sales_order_id: int = None
+    cut_in_full: bool = False
     
     @classmethod
     def find_by_product_number_and_line_number(cls, database_connection: CutListDatabase, product_number, line_number) -> 'SalesOrderItem':
@@ -42,7 +43,7 @@ class SalesOrderItem:
         return to_return
 
     @property
-    def quantity_requseted(self) -> float:
+    def quantity_left_to_ship(self) -> float:
         """Returns the quantity requested for this item."""
 
         return self.qty_to_fulfill - self.qty_picked - self.qty_fulfilled

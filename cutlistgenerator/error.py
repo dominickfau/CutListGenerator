@@ -31,8 +31,3 @@ class InvalidSettingsFileError(GeneralError):
 class NoRowSelectedError(GeneralError):
     """Error raised when no row is selected in the table."""
     pass
-
-class UnknownTypeConversionWarning(UserWarning):
-    """Warning raised when an unknown type conversion is requested."""
-    
-    pass

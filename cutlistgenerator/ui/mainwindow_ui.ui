@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1157</width>
+    <height>837</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <item>
+     <widget class="QGroupBox" name="groupBox">
+      <property name="title">
+       <string>Sales Order Search</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <layout class="QFormLayout" name="formLayout">
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>SO Number:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="so_search_so_number_line_edit"/>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Product Number:</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="so_search_product_number_line_edit"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="so_search_include_finished_check_box">
+         <property name="text">
+          <string>Include Finished</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="so_search_push_button">
+         <property name="text">
+          <string>Search</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTableWidget" name="sales_order_table_widget">
+      <property name="editTriggers">
+       <set>QAbstractItemView::NoEditTriggers</set>
+      </property>
+      <property name="selectionBehavior">
+       <enum>QAbstractItemView::SelectRows</enum>
+      </property>
+      <column>
+       <property name="text">
+        <string>Id</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Due Date</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Customer Name</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>SO Number</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Product Number</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Description</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Qty Left To Ship</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Line Number</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Is Child Item</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Is Fully Cut</string>
+       </property>
+      </column>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1157</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <widget class="QMenu" name="menuFishbowl">
+     <property name="title">
+      <string>Fishbowl</string>
+     </property>
+     <addaction name="actionGet_Sales_Order_Data"/>
+    </widget>
+    <addaction name="menuFishbowl"/>
+   </widget>
+   <addaction name="menuFile"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionGet_Current_SO_Data_From_Fishbowl">
+   <property name="text">
+    <string>Get Current SO Data From Fishbowl</string>
+   </property>
+  </action>
+  <action name="actionGet_Sales_Order_Data">
+   <property name="text">
+    <string>Get Sales Order Data</string>
+   </property>
+  </action>
+  <action name="actionFind_Product_To_Add">
+   <property name="text">
+    <string>Find Product To Add</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>so_search_so_number_line_edit</sender>
+   <signal>returnPressed()</signal>
+   <receiver>so_search_push_button</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>254</x>
+     <y>194</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>210</x>
+     <y>280</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>so_search_product_number_line_edit</sender>
+   <signal>returnPressed()</signal>
+   <receiver>so_search_push_button</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>254</x>
+     <y>220</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>210</x>
+     <y>280</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
