@@ -192,6 +192,23 @@ class MySQLDatabaseConnection(CutListDatabase):
             return None
         return wire_cutter_option
     
+    def get_wire_cutter_options_by_wire_cutter_id(self, wire_cutter_id: int) -> List[dict]:
+        values = {
+            'wire_cutter_id': wire_cutter_id
+        }
+
+        cursor = self.__get_cursor()
+        cursor.execute("""
+                SELECT wire_cutter_option.* FROM wire_cutter_option
+                JOIN wire_cutter_to_wire_cutter_option ON wire_cutter_option.id = wire_cutter_to_wire_cutter_option.wire_cutter_option_id
+                JOIN wire_cutter ON wire_cutter_to_wire_cutter_option.wire_cutter_id = wire_cutter.id
+                WHERE wire_cutter.id = %(wire_cutter_id)s""", values)
+        wire_cutter_options = cursor.fetchall()
+        cursor.close()
+        if not wire_cutter_options:
+            return []
+        return wire_cutter_options
+    
     def get_wire_cutter_options_by_wire_cutter_name(self, wire_cutter_name: str) -> List[dict]:
         values = {
             'wire_cutter_name': wire_cutter_name
@@ -252,14 +269,32 @@ class MySQLDatabaseConnection(CutListDatabase):
         if not wire_cutter:
             return None
         return wire_cutter
+    
+    def get_wire_cutter_by_id(self, wire_cutter_id: int) -> dict:
+        values = {
+            'id': wire_cutter_id
+        }
 
-    def get_all_wire_cutters(self) -> List[dict]:
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM wire_cutter WHERE id = %(id)s", values)
+        wire_cutter = cursor.fetchone()
+        cursor.close()
+        if not wire_cutter:
+            return None
+        return wire_cutter
+
+    def get_all_wire_cutters(self) -> dict:
+        """Gets a list of all wire cutters in the database. Along with any options."""
+        wire_cutters = {}
         cursor = self.__get_cursor()
         cursor.execute("SELECT * FROM wire_cutter")
-        wire_cutters = cursor.fetchall()
+        wire_cutter_data = cursor.fetchall()
+        for wire_cutter in wire_cutter_data:
+            wire_cutters[wire_cutter["name"]] = wire_cutter
+            wire_cutter_name = wire_cutter["name"]
+            wire_cutter_options = self.get_wire_cutter_options_by_wire_cutter_name(wire_cutter_name)
+            wire_cutters[wire_cutter_name]["options"] = wire_cutter_options
         cursor.close()
-        if not wire_cutters:
-            return []
         return wire_cutters
 
     def save_wire_cutter(self, wire_cutter) -> int:
@@ -463,6 +498,32 @@ class MySQLDatabaseConnection(CutListDatabase):
         if not sales_order:
             return None
         return sales_order
+    
+    def get_sales_order_by_sales_order_item_id(self, sales_order_item_id: int) -> dict:
+        values = {
+            'sales_order_item_id': sales_order_item_id
+        }
+
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM sales_order_item WHERE id = %(sales_order_item_id)s", values)
+        sales_order_items = cursor.fetchall()
+        if not sales_order_items:
+            return None
+        sales_order_id = sales_order_items[0]["sales_order_id"]
+        values = {
+            'sales_order_id': sales_order_id
+        }
+
+        cursor.execute("SELECT * FROM sales_order WHERE id = %(sales_order_id)s", values)
+        sales_order = cursor.fetchone()
+        cursor.close()
+        if not sales_order:
+            return None
+        return {
+                    "sales_order": sales_order,
+                    "sales_order_items": sales_order_items
+                }
+
 
     def get_all_sales_orders(self) -> List[dict]:
         cursor = self.__get_cursor()
@@ -525,6 +586,15 @@ class MySQLDatabaseConnection(CutListDatabase):
         if not cut_jobs:
             return []
         return cut_jobs
+    
+    def get_all_open_cut_jobs(self) -> List[dict]:
+        cursor = self.__get_cursor()
+        cursor.execute("SELECT * FROM cut_job WHERE is_ready_for_build = 0")
+        cut_jobs = cursor.fetchall()
+        cursor.close()
+        if not cut_jobs:
+            return []
+        return cut_jobs
 
     def get_cut_jobs_by_product_number(self, product_number: str) -> List[dict]:
         cut_jobs = []
@@ -573,10 +643,9 @@ class MySQLDatabaseConnection(CutListDatabase):
         if cut_job.assigned_wire_cutter is not None:
             assigned_wire_cutter_id = cut_job.assigned_wire_cutter.id
 
-
         values = {
-            'product_id': cut_job.product_id,
-            'related_sales_order_id': related_sales_order_item_id,
+            'product_id': cut_job.product.id,
+            'related_sales_order_item_id': related_sales_order_item_id,
             'assigned_wire_cutter_id': assigned_wire_cutter_id,
             'quantity_cut': cut_job.quantity_cut,
             'date_cut_start': cut_job.date_cut_start,
@@ -589,17 +658,29 @@ class MySQLDatabaseConnection(CutListDatabase):
             'is_spliced': cut_job.is_spliced,
             'is_terminated': cut_job.is_terminated,
             'is_ready_for_build': cut_job.is_ready_for_build,
-            'id': cut_job.id
+            'id': cut_job.id,
+            'date_created': cut_job.date_created
         }
 
         cursor = self.__get_cursor()
         if cut_job.id is None:
-            cursor.execute("""INSERT INTO cut_job (product_id, is_cut)
-                                VALUES(%(product_id)s, %(is_cut)s)""", values)
+            cursor.execute("""INSERT INTO cut_job (product_id, related_sales_order_item_id, assigned_wire_cutter_id,
+                                                    quantity_cut, date_cut_start, date_cut_end, date_termination_start, date_termination_end,
+                                                    date_splice_start, date_splice_end, is_cut, is_spliced, is_terminated, is_ready_for_build, date_created)
+                                VALUES(%(product_id)s, %(related_sales_order_item_id)s, %(assigned_wire_cutter_id)s,
+                                %(quantity_cut)s, %(date_cut_start)s, %(date_cut_end)s, %(date_termination_start)s,
+                                %(date_termination_end)s, %(date_splice_start)s, %(date_splice_end)s, %(is_cut)s,
+                                %(is_spliced)s, %(is_terminated)s, %(is_ready_for_build)s, %(date_created)s)""", values)
             cut_job_id = cursor.lastrowid
         else:
-            cursor.execute("""UPDATE cut_job SET product_id = %(product_id)s, is_cut = %(is_cut)s
-                                WHERE id = %(id)s""", values)
+            cursor.execute("""UPDATE cut_job SET product_id = %(product_id)s, related_sales_order_item_id = %(related_sales_order_item_id)s,
+                                            assigned_wire_cutter_id = %(assigned_wire_cutter_id)s, quantity_cut = %(quantity_cut)s,
+                                            date_cut_start = %(date_cut_start)s, date_cut_end = %(date_cut_end)s,
+                                            date_termination_start = %(date_termination_start)s, date_termination_end = %(date_termination_end)s,
+                                            date_splice_start = %(date_splice_start)s, date_splice_end = %(date_splice_end)s,
+                                            is_cut = %(is_cut)s, is_spliced = %(is_spliced)s, is_terminated = %(is_terminated)s,
+                                            is_ready_for_build = %(is_ready_for_build)s
+                                            WHERE id = %(id)s""", values)
             cut_job_id = values["id"]
         cursor.execute("COMMIT;")
         cursor.close()

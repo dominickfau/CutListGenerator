@@ -17,18 +17,25 @@ class SalesOrderItem:
     id: int = None
     sales_order_id: int = None
     cut_in_full: bool = False
+    date_added: datetime.datetime = None
     
     @classmethod
     def find_by_product_number_and_line_number(cls, database_connection: CutListDatabase, product_number, line_number) -> 'SalesOrderItem':
         """Finds a sales order item by product number and line number. Returns None if not found."""
-
+        raise NotImplementedError()
         items = database_connection.get_sales_order_items_by_sales_order_number()
 
     @classmethod
-    def from_sales_order_item_id(cls, database_connection: CutListDatabase, sales_order_item_id: int) -> 'SalesOrderItem':
-        """Returns a sales order item from the database by its ID."""
+    def from_id(cls, database_connection: CutListDatabase, sales_order_item_id: int) -> 'SalesOrderItem':
+        """Returns a sales order item from the database by its ID. Returns None if not found."""
 
-        return cls(database_connection, **database_connection.get_sales_order_item_by_id(sales_order_item_id))
+        data = database_connection.get_sales_order_item_by_id(sales_order_item_id)
+        if not data:
+            return None
+        product = Product.from_id(database_connection, data['product_id'])
+        del data['product_id']
+        data['product'] = product
+        return cls(database_connection, **data)
     
     @classmethod
     def from_sales_order_id(cls, database_connection: CutListDatabase, sales_order_id: int) -> 'SalesOrderItem':
@@ -75,6 +82,25 @@ class SalesOrder:
 
         if self.order_items is None:
             self.order_items = []
+    
+    @classmethod
+    def from_sales_order_item_id(cls, database_connection: CutListDatabase, sales_order_item_id: int) -> 'SalesOrder':
+        """Returns a sales order from the database by one of its items ID. Returns None if not found."""
+        data = database_connection.get_sales_order_by_sales_order_item_id(sales_order_item_id)
+        if not data:
+            return None
+        sales_order = cls(database_connection, **data['sales_order'])
+
+        for sales_order_item_data in data['sales_order_items']:
+            product = Product.from_id(database_connection, sales_order_item_data['product_id'])
+
+            # Remove unneeded data
+            del sales_order_item_data['product_id']
+
+            sales_order_item = SalesOrderItem(database_connection, product, **sales_order_item_data)
+            sales_order.add_item(sales_order_item)
+
+        return sales_order
 
     @classmethod
     def find_by_number(cls, database_connection: CutListDatabase, number: str) -> 'SalesOrder':

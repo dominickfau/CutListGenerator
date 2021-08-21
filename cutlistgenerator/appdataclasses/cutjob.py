@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from . import datetime, dataclass
 from . import CutListDatabase
 from .product import Product
@@ -26,6 +26,65 @@ class CutJob:
     is_terminated: bool = False
     is_ready_for_build: bool = False
     id: int = None
+    date_created: datetime.datetime = None
+
+    def __post_init__(self):
+        if self.date_created == None:
+            self.date_created = datetime.datetime.now()
+        
+    @classmethod
+    def from_id(cls, database_connection: CutListDatabase, id: int):
+        """Loads the cut job from the database by its ID."""
+        cut_job_data = database_connection.get_cut_job_by_id(id)
+        if not cut_job_data:
+            return None
+        
+        product_id = cut_job_data.pop('product_id')
+        wire_cutter_id = cut_job_data.pop('assigned_wire_cutter_id')
+        sales_order_item_id = cut_job_data.pop('related_sales_order_item_id')
+        product = Product.from_id(database_connection, product_id)
+        wire_cutter = WireCutter.from_id(database_connection, wire_cutter_id)
+        sales_order_item = None
+        if sales_order_item_id != None:
+            sales_order_item = SalesOrderItem.from_id(database_connection, sales_order_item_id)
+        cut_job = cls(database_connection, product, wire_cutter, sales_order_item, **cut_job_data)
+        return cut_job
+
+    @classmethod
+    def from_sales_order_item_id(cls, database_connection: CutListDatabase, sales_order_item_id: int) -> 'CutJob':
+        """Loads a cut job from the database given the sales order item id. Returns None if no cut job was found."""
+        # TODO: Handle cases of multiple cut jobs for the same sales order item.
+        data = database_connection.get_cut_job_by_so_item_id(sales_order_item_id)
+        if not data:
+            return None
+        product_id = data[0].pop('product_id')
+        product = Product.from_id(database_connection, product_id)
+        wire_cutter_id = data[0].pop('assigned_wire_cutter_id')
+        wire_cutter = WireCutter.from_id(database_connection, wire_cutter_id)
+        sales_order_item_id = data[0].pop('related_sales_order_item_id')
+        related_sales_order_item = SalesOrderItem.from_id(database_connection, sales_order_item_id)
+        
+        cut_job = cls(database_connection, product, wire_cutter, related_sales_order_item, **data[0])
+        return cut_job
+    
+    @classmethod
+    def get_all_open(cls, database_connection: CutListDatabase) -> List['CutJob']:
+        """Returns all open cut jobs."""
+        data = database_connection.get_all_open_cut_jobs()
+        if not data:
+            return []
+        
+        cut_jobs = []
+        for cut_job_data in data:
+            product_id = cut_job_data.pop('product_id')
+            product = Product.from_id(database_connection, product_id)
+            wire_cutter_id = cut_job_data.pop('assigned_wire_cutter_id')
+            wire_cutter = WireCutter.from_id(database_connection, wire_cutter_id)
+            sales_order_item_id = cut_job_data.pop('related_sales_order_item_id')
+            related_sales_order_item = SalesOrderItem.from_id(database_connection, sales_order_item_id)
+            cut_job = cls(database_connection, product, wire_cutter, related_sales_order_item, **cut_job_data)
+            cut_jobs.append(cut_job)
+        return cut_jobs
 
     def set_assigned_wire_cutter(self, wire_cutter: WireCutter):
         """Set the assigned wire cutter for this cut job."""

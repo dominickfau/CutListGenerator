@@ -33,7 +33,7 @@
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="0" column="0" colspan="2">
-    <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,1">
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
       <widget class="QGroupBox" name="groupBox">
        <property name="title">
@@ -98,7 +98,7 @@
           <item>
            <widget class="QComboBox" name="wire_cutter_name_combo_box">
             <property name="editable">
-             <bool>true</bool>
+             <bool>false</bool>
             </property>
            </widget>
           </item>
@@ -131,7 +131,7 @@
        <property name="title">
         <string>Optional</string>
        </property>
-       <layout class="QFormLayout" name="formLayout_2">
+       <layout class="QFormLayout" name="formLayout_9">
         <item row="0" column="0">
          <widget class="QLabel" name="label_3">
           <property name="text">
@@ -143,26 +143,88 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0">
+         <layout class="QHBoxLayout" name="horizontalLayout">
           <item>
-           <widget class="QLineEdit" name="linked_so_item_line_edit">
-            <property name="readOnly">
-             <bool>true</bool>
+           <layout class="QFormLayout" name="formLayout_2">
+            <property name="labelAlignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
             </property>
-           </widget>
+            <property name="formAlignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+            </property>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_11">
+              <property name="text">
+               <string>Sales Order Number:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="linked_sales_order_number_value_label">
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_13">
+              <property name="text">
+               <string>Product Number:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="linked_sales_order_product_number_value_label">
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_15">
+              <property name="text">
+               <string>Line Number:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLabel" name="linked_sales_order_line_number_value_label">
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item>
-           <widget class="QPushButton" name="find_so_item_push_button">
-            <property name="maximumSize">
-             <size>
-              <width>45</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Find</string>
-            </property>
-           </widget>
+           <layout class="QVBoxLayout" name="verticalLayout_4">
+            <item>
+             <widget class="QPushButton" name="find_so_item_push_button">
+              <property name="maximumSize">
+               <size>
+                <width>55</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Find</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="remove_linked_so_item_push_button">
+              <property name="maximumSize">
+               <size>
+                <width>55</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Remove</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
          </layout>
         </item>
@@ -382,7 +444,6 @@
  <tabstops>
   <tabstop>product_number_combo_box</tabstop>
   <tabstop>wire_cutter_name_combo_box</tabstop>
-  <tabstop>linked_so_item_line_edit</tabstop>
   <tabstop>find_so_item_push_button</tabstop>
   <tabstop>cutting_group_box</tabstop>
   <tabstop>qty_cut_spin_box</tabstop>

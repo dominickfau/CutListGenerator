@@ -43,6 +43,11 @@ class CutListDatabase(Database):
     
     # WireCutterOption methods
     @abstractmethod
+    def get_wire_cutter_options_by_wire_cutter_id(self, wire_cutter_id) -> List[dict]:
+        """Get wire cutter options for a wire cutter ID. Returns empty list if not found."""
+        pass
+    
+    @abstractmethod
     def get_wire_cutter_options_by_wire_cutter_name(self, wire_cutter_name: str) -> List[dict]:
         """Get wire cutter options by wire cutter name. Returns empty list if not found."""
         pass
@@ -66,6 +71,11 @@ class CutListDatabase(Database):
     @abstractmethod
     def get_wire_cutter_by_name(self, name: str) -> dict:
         """Get wire cutter by name. Returns None if not found."""
+        pass
+    
+    @abstractmethod
+    def get_wire_cutter_by_id(self, id: int) -> dict:
+        """Get wire cutter by ID. Returns None if not found."""
         pass
 
     @abstractmethod
@@ -116,6 +126,14 @@ class CutListDatabase(Database):
 
     # SalesOrderItem methods
     @abstractmethod
+    def get_sales_order_by_sales_order_item_id(self, sales_order_item_id: int) -> dict:
+        """Get sales order by sales order item ID. Returns None if not found.
+            Returns a dict with the following keys: 'sales_order' containing
+            a dict representation of the sales order and 'sales_order_item'
+            containing a dict list of the sales order items."""
+        pass
+    
+    @abstractmethod
     def get_sales_order_items_by_sales_order_number(self, number: str) -> List[dict]:
         """Get all sales order items for sales order by number. Returns empty list if not found."""
         pass
@@ -150,10 +168,20 @@ class CutListDatabase(Database):
     def get_all_uncut_cut_jobs(self) -> List[dict]:
         """Get all cut jobs that have not been cut. Returns empty list if not found."""
         pass
+    
+    @abstractmethod
+    def get_all_open_cut_jobs(self) -> List[dict]:
+        """Get all cut jobs that are open. Returns empty list if not found."""
+        pass
 
     @abstractmethod
     def get_cut_jobs_by_product_number(self, product_number: str) -> List[dict]:
         """Get cut jobs by product number. Returns empty list if not found."""
+        pass
+    
+    @abstractmethod
+    def get_cut_job_by_so_item_id(self, so_item_id: int) -> List[dict]:
+        """Get cut job by cut job id. Returns None if not found."""
         pass
 
     @abstractmethod

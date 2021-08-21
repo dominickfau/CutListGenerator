@@ -12,7 +12,7 @@ class WireCutterOption:
     id: int = None
 
     @classmethod
-    def from_number(cls, database_connection: CutListDatabase, name: str) -> 'WireCutterOption':
+    def from_name(cls, database_connection: CutListDatabase, name: str) -> 'WireCutterOption':
         """Returns a wire cutter option from the database by its name."""
 
         return cls(database_connection, **database_connection.get_wire_cutter_option_by_name(name))
@@ -46,6 +46,30 @@ class WireCutter:
         """Returns a wire cutter from the database by its name."""
 
         return cls(database_connection, **database_connection.get_wire_cutter_by_name(name))
+    
+    @classmethod
+    def from_id(cls, database_connection: CutListDatabase, id: int) -> 'WireCutter':
+        """Returns a wire cutter from the database by its id."""
+        data = database_connection.get_wire_cutter_by_id(id)
+        options_data = database_connection.get_wire_cutter_options_by_wire_cutter_id(id)
+        options = [WireCutterOption(database_connection, **option_data) for option_data in options_data]
+        return cls(database_connection, **data, options=options)
+    
+    @classmethod
+    def get_all(cls, database_connection: CutListDatabase) -> List['WireCutter']:
+        """Returns all wire cutters."""
+        wire_cutters_data = database_connection.get_all_wire_cutters()
+        wire_cutters = []
+        for wire_cutter_name in wire_cutters_data:
+            wire_cutter_data = wire_cutters_data[wire_cutter_name]
+            wire_cutter_options = wire_cutters_data[wire_cutter_name].pop('options', None)
+            wire_cutter = cls(database_connection, **wire_cutter_data)
+
+            if wire_cutter_options is not None:
+                for option in wire_cutter_options:
+                    wire_cutter.add_option(WireCutterOption.from_name(database_connection, option['name']))
+            wire_cutters.append(wire_cutter)
+        return wire_cutters
 
     def add_option(self, option: WireCutterOption):
         """Add a wire cutter option to this wire cutter. If the option already exists, it will be updated."""

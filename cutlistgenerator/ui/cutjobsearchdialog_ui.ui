@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>cut_job_search_dialog</class>
+ <widget class="QDialog" name="cut_job_search_dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1044</width>
+    <height>402</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Cut Job Search</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QFormLayout" name="formLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Product Number:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="product_number_combo_box">
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+       <property name="insertPolicy">
+        <enum>QComboBox::NoInsert</enum>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Wire Cutter:</string>
+       </property>
+       <property name="buddy">
+        <cstring>wire_cutter_name_combo_box</cstring>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QComboBox" name="wire_cutter_name_combo_box">
+       <property name="editable">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QPushButton" name="search_push_button">
+     <property name="text">
+      <string>Search</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTableWidget" name="cut_job_table_widget">
+     <property name="editTriggers">
+      <set>QAbstractItemView::NoEditTriggers</set>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectRows</enum>
+     </property>
+     <property name="sortingEnabled">
+      <bool>false</bool>
+     </property>
+     <column>
+      <property name="text">
+       <string>Id</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Date Created</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Product Number</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>SO Number</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Assigned Cutter</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Quantity Cut</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Cut Start Date</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Cut End Date</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Term Start Date</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Term End Date</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Splice Start Date</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Splice End Date</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Ready For Build</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="select_push_button">
+     <property name="text">
+      <string>Select</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

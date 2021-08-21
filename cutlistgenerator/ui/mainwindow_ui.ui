@@ -122,6 +122,13 @@
       </column>
      </widget>
     </item>
+    <item>
+     <widget class="QPushButton" name="so_view_push_button">
+      <property name="text">
+       <string>View</string>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -137,15 +144,25 @@
     <property name="title">
      <string>File</string>
     </property>
-    <widget class="QMenu" name="menuFishbowl">
-     <property name="title">
-      <string>Fishbowl</string>
-     </property>
-     <addaction name="actionGet_Sales_Order_Data"/>
-    </widget>
-    <addaction name="menuFishbowl"/>
+    <addaction name="actionSettings"/>
+    <addaction name="actionSystem_Properties"/>
+   </widget>
+   <widget class="QMenu" name="menuFishbowl_2">
+    <property name="title">
+     <string>Fishbowl</string>
+    </property>
+    <addaction name="action_fishbowl_Get_Sales_Order_Data"/>
+   </widget>
+   <widget class="QMenu" name="menuCut_Job">
+    <property name="title">
+     <string>Cut Job</string>
+    </property>
+    <addaction name="action_cut_job_Create_New"/>
+    <addaction name="action_cut_job_Show_All_Open"/>
    </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuFishbowl_2"/>
+   <addaction name="menuCut_Job"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionGet_Current_SO_Data_From_Fishbowl">
@@ -161,6 +178,31 @@
   <action name="actionFind_Product_To_Add">
    <property name="text">
     <string>Find Product To Add</string>
+   </property>
+  </action>
+  <action name="action_fishbowl_Get_Sales_Order_Data">
+   <property name="text">
+    <string>Get Sales Order Data</string>
+   </property>
+  </action>
+  <action name="action_cut_job_Create_New">
+   <property name="text">
+    <string>Create New</string>
+   </property>
+  </action>
+  <action name="action_cut_job_Show_All_Open">
+   <property name="text">
+    <string>Show All Open</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="text">
+    <string>Settings</string>
+   </property>
+  </action>
+  <action name="actionSystem_Properties">
+   <property name="text">
+    <string>System Properties</string>
    </property>
   </action>
  </widget>

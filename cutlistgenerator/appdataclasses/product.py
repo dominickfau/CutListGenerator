@@ -1,4 +1,4 @@
-from . import dataclass
+from . import dataclass, List
 from . import CutListDatabase
 from cutlistgenerator.error import ProductNotInKitError
 
@@ -48,6 +48,12 @@ class Product:
         data = cls.find_parent_kit_product_from_child_product_data(database_connection, data)
 
         return cls(database_connection, **data)
+    
+    @classmethod
+    def get_all(cls, database_connection: CutListDatabase) -> List['Product']:
+        """Returns all products."""
+
+        return [cls.from_number(database_connection, product_data['number']) for product_data in database_connection.get_all_products()]
     
     @classmethod
     def from_id(cls, database_connection: CutListDatabase, id: int) -> 'Product':

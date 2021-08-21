@@ -11,6 +11,7 @@ import cutlistgenerator
 # Ui Windows
 from cutlistgenerator.ui.mainwindow_ui import Ui_MainWindow
 from cutlistgenerator.ui.cutjobdialog import CutJobDialog
+from cutlistgenerator.ui.cutjobsearchdialog import CutJobSearchDialog
 
 
 from cutlistgenerator.ui.customwidgets.resizablemessagebox import ResizableMessageBox
@@ -87,7 +88,13 @@ class Application(QtWidgets.QMainWindow):
         self.progressBar.setValue(50)
         self.progressBar.hide()
 
+        # Menubar
+        self.ui.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
+        self.ui.action_cut_job_Show_All_Open.triggered.connect(self.open_cut_job_search_dialog)
+
+        # Push buttons
         self.ui.so_search_push_button.clicked.connect(self.load_so_table_data)
+        self.ui.so_view_push_button.clicked.connect(self.on_view_button_clicked)
         self.ui.sales_order_table_widget.doubleClicked.connect(self.on_so_table_row_double_clicked)
 
         # This auto strips the text when the widget looses focus.
@@ -105,13 +112,17 @@ class Application(QtWidgets.QMainWindow):
             cutlistgenerator.program_settings.set_database_setup(True)
             logger.info("[DATABASE] Database setup complete.")
 
-        self.ui.actionGet_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
         auto_update_fishbowl_so_data = SystemProperty.find_by_name(self.cut_list_generator_database, "fishbowl_auto_update_sales_orders").value
         if auto_update_fishbowl_so_data:
             logger.info("[AUTO UPDATE] Auto updating sales order data from Fishbowl.")
             self.thread_get_current_fb_data()
         
         self.load_so_table_data()
+
+    def open_cut_job_search_dialog(self):
+        dialog = CutJobSearchDialog(self.cut_list_generator_database, parent=self)
+        if dialog.exec():
+            pass
 
     def get_so_search_data(self):
         include_finished = self.ui.so_search_include_finished_check_box.isChecked()
@@ -135,18 +146,41 @@ class Application(QtWidgets.QMainWindow):
 
         return {'product_number': product_number, 'cut_in_full': include_finished, 'so_number': so_number}
     
+    def on_view_button_clicked(self):
+        row_num = self.ui.sales_order_table_widget.currentRow()
+        data = self.get_row_data_from_so_table(row_num)
+        dialog = CutJobSearchDialog(self.cut_list_generator_database, parent=self)
+        if dialog.exec():
+            cut_job = dialog.cut_job
+            self.load_cut_job_data(cut_job)
+
     def on_so_table_row_double_clicked(self, row):
         row_num = row.row()
+        data = self.get_row_data_from_so_table(row_num)
+        product = Product.from_number(self.cut_list_generator_database, data['product_number'])
+        dialog = CutJobSearchDialog(self.cut_list_generator_database, product=product, parent=self)
+        if dialog.exec():
+            cut_job = dialog.cut_job
+            self.load_cut_job_data(cut_job)
+
+    def get_row_data_from_so_table(self, row_num: int) -> dict:
         so_item_id = int(self.ui.sales_order_table_widget.item(row_num, 0).text())
+        so_number = self.ui.sales_order_table_widget.item(row_num, 3).text()
         product_number = self.ui.sales_order_table_widget.item(row_num, 4).text()
-        product = Product.from_number(self.cut_list_generator_database, product_number)
-        self.load_cut_job_data(so_item_id, product)
+        return {
+            'so_item_id': so_item_id,
+            'so_number': so_number,
+            'product_number': product_number
+        }
     
-    def load_cut_job_data(self, so_item_id, product: Product):
-        logger.debug(f"[CUT JOB] Loading cut job data for sales order item ID: {so_item_id}'")
-        data = self.cut_list_generator_database.get_cut_job_by_so_item_id(so_item_id)
-        if not data:
-            logger.info(f"[CUT JOB] No cut job data found for sales order item ID: {so_item_id}")
+    def load_cut_job_data(self, cut_job: CutJob = None):
+        row_data = self.get_row_data_from_so_table(self.ui.sales_order_table_widget.currentRow())
+        product = Product.from_number(self.cut_list_generator_database, row_data['product_number'])
+        so_item_id = row_data['so_item_id']
+        # TODO: Change this it use the cut job id instead of the so item id.
+        # logger.debug(f"[CUT JOB] Loading cut job data for sales order item ID: {so_item_id}'")
+        if not cut_job:
+            # logger.info(f"[CUT JOB] No cut job data found for sales order item ID: {so_item_id}")
             msg = QMessageBox()
             msg.setWindowTitle("Cut Job")
             msg.setIcon(QMessageBox.Information)
@@ -154,18 +188,32 @@ class Application(QtWidgets.QMainWindow):
             msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
             msg.exec()
             if msg.result() == QMessageBox.Yes:
-                self.create_cut_job(product)
+                self.create_cut_job(product, so_item_id)
             return
-    
-    def create_cut_job(self, product: Product):
+        self.load_cut_job(cut_job)
+        
+    def load_cut_job(self, cut_job: CutJob):
+        logger.info(f"[CUT JOB] Loading cut job ID: {cut_job.id}")
+        # Open a dialog to get the cut job data.
+        dialog = CutJobDialog(cut_list_generator_database=self.cut_list_generator_database,
+                              fishbowl_database=self.fishbowl_database,
+                              cut_job=cut_job,
+                              parent=self)
+        if dialog.exec():
+            dialog.cut_job.save()
+            logger.info(f"[CUT JOB] Cut job data saved. Job ID: {dialog.cut_job.id}")
+        
+    def create_cut_job(self, product: Product, linked_so_item_id: int = None):
         logger.info(f"[CUT JOB] Creating cut job for product: {product.number}")
         # Open a dialog to get the cut job data.
         dialog = CutJobDialog(cut_list_generator_database=self.cut_list_generator_database,
                               fishbowl_database=self.fishbowl_database,
                               product=product,
+                              linked_so_item_id=linked_so_item_id,
                               parent=self)
         if dialog.exec():
-            print(dialog.cut_job)
+            dialog.cut_job.save()
+            logger.info(f"[CUT JOB] Cut job data saved. Job ID: {dialog.cut_job.id}")
 
     def clear_table(self, tableWidget):
         logger.debug("[TABLE] Clearing table.")
@@ -176,6 +224,7 @@ class Application(QtWidgets.QMainWindow):
         search_data = self.get_so_search_data()
         self.clear_table(self.ui.sales_order_table_widget)
 
+        # TODO: Remove this when we have a better way of getting the data.
         table_data = self.cut_list_generator_database.get_sales_order_table_data(search_data)
         self.ui.sales_order_table_widget.setRowCount(len(table_data))
         logger.debug(f"[SEARCH] Found {len(table_data)} rows of data.")
