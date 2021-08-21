@@ -1,5 +1,7 @@
+import datetime
 from cutlistgenerator import database
 from PyQt5.QtWidgets import QDialog, QMessageBox
+from PyQt5.QtCore import QDateTime
 
 from cutlistgenerator.ui.cutjobdialog_ui import Ui_cut_job_dialog
 from cutlistgenerator.ui.wirecutterdialog import WireCutterDialog
@@ -71,34 +73,50 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
 
         self.product_number_combo_box.setCurrentText(cut_job.product.number)
         self.wire_cutter_name_combo_box.setCurrentText(cut_job.assigned_wire_cutter.name)
+
+        current_date_time = QDateTime.fromString(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
         
         # Cutting
+        # Initial set datetime to current datetime.
+        self.cut_start_date_time_edit.setDateTime(current_date_time)
+        self.cut_end_date_time_edit.setDateTime(current_date_time)
+        self.termination_start_date_time_edit.setDateTime(current_date_time)
+        self.termination_end_date_time_edit.setDateTime(current_date_time)
+        self.splice_start_date_time_edit.setDateTime(current_date_time)
+        self.splice_end_date_time_edit.setDateTime(current_date_time)
+
         if cut_job.date_cut_start:
             self.cutting_group_box.setChecked(True)
             self.qty_cut_spin_box.setValue(cut_job.quantity_cut)
-            # self.cut_start_date_time_edit.setDate(cut_job.date_cut_start)
+            date_time = QDateTime.fromString(cut_job.date_cut_start.strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
+            self.cut_start_date_time_edit.setDateTime(date_time)
         
             if cut_job.date_cut_end:
                 self.cutting_finished_group_box.setChecked(True)
-                # self.cut_end_date_time_edit.setDate(cut_job.date_cut_end)
+                date_time = QDateTime.fromString(cut_job.date_cut_end.strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
+                self.cut_end_date_time_edit.setDateTime(date_time)
         
         # Termination
         if cut_job.date_termination_start:
             self.termination_group_box.setChecked(True)
-            # self.termination_start_date_time_edit.setDate(cut_job.date_termination_start)
+            date_time = QDateTime.fromString(cut_job.date_termination_start.strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
+            self.termination_start_date_time_edit.setDateTime(date_time)
         
             if cut_job.date_termination_end:
                 self.termination_finished_group_box.setChecked(True)
-                # self.termination_end_date_time_edit.setDate(cut_job.date_termination_end)
+                date_time = QDateTime.fromString(cut_job.date_termination_end.strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
+                self.termination_end_date_time_edit.setDateTime(date_time)
         
         # Splice
         if cut_job.date_splice_start:
             self.splice_group_box.setChecked(True)
-            # self.splice_start_date_time_edit.setDate(cut_job.date_splice_start)
+            date_time = QDateTime.fromString(cut_job.date_splice_start.strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
+            self.splice_start_date_time_edit.setDateTime(date_time)
             
             if cut_job.date_splice_end:
                 self.splice_finished_group_box.setChecked(True)
-                # self.splice_end_date_time_edit.setDate(cut_job.date_splice_end)
+                date_time = QDateTime.fromString(cut_job.date_splice_end.strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
+                self.splice_end_date_time_edit.setDateTime(date_time)
 
     def link_sales_order_item(self, so_item_id: int):
         """Links a sales order item to the cut job. Takes a sales order item id."""
@@ -308,6 +326,8 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
         
         if not splice_finished_flag:
             splice_end_date_time = None
+        
+        ready_for_build_flag = cut_finished_flag and termination_finished_flag and splice_finished_flag
 
         if not self.cut_job:
             self.cut_job = CutJob(database_connection=self.cut_list_generator_database,
@@ -324,7 +344,7 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
                                 is_cut=cut_finished_flag,
                                 is_spliced=splice_finished_flag,
                                 is_terminated=termination_finished_flag,
-                                is_ready_for_build=False)
+                                is_ready_for_build=ready_for_build_flag)
         else:
             product = Product.from_number(self.cut_list_generator_database, product_number)
             assigned_wire_cutter = WireCutter.from_name(self.cut_list_generator_database, wire_cutter_name)
@@ -342,6 +362,6 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
             self.cut_job.is_cut = cut_finished_flag
             self.cut_job.is_spliced = splice_finished_flag
             self.cut_job.is_terminated = termination_finished_flag
-            self.cut_job.is_ready_for_build = False
+            self.cut_job.is_ready_for_build = ready_for_build_flag
 
         self.accept()

@@ -1,3 +1,4 @@
+from cutlistgenerator.appdataclasses.salesorder import SalesOrderItem
 from cutlistgenerator.appdataclasses import product
 from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 import sys, os, traceback, datetime
@@ -90,6 +91,7 @@ class Application(QtWidgets.QMainWindow):
 
         # Menubar
         self.ui.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
+        self.ui.action_cut_job_Create_New.triggered.connect(lambda: self.load_cut_job_data())
         self.ui.action_cut_job_Show_All_Open.triggered.connect(self.open_cut_job_search_dialog)
 
         # Push buttons
@@ -148,20 +150,41 @@ class Application(QtWidgets.QMainWindow):
     
     def on_view_button_clicked(self):
         row_num = self.ui.sales_order_table_widget.currentRow()
+        if row_num == -1:
+            msg = QMessageBox()
+            msg.setWindowTitle("Sales Order")
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Please select a row to view.")
+            msg.setStandardButtons(QMessageBox.Ok)
+            msg.exec()
+            return
+
         data = self.get_row_data_from_so_table(row_num)
-        dialog = CutJobSearchDialog(self.cut_list_generator_database, parent=self)
-        if dialog.exec():
-            cut_job = dialog.cut_job
-            self.load_cut_job_data(cut_job)
+        sales_order_item = SalesOrderItem.from_id(self.cut_list_generator_database, data['so_item_id'])
+        product = Product.from_number(self.cut_list_generator_database, data['product_number'])
+        cut_jobs = CutJob.from_sales_order_item_id(self.cut_list_generator_database, sales_order_item.id)
+        if len(cut_jobs) == 0:
+            self.load_cut_job_data()
+        else:
+            self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database, product=product, sales_order_item=sales_order_item)
 
     def on_so_table_row_double_clicked(self, row):
         row_num = row.row()
         data = self.get_row_data_from_so_table(row_num)
+        sales_order_item = SalesOrderItem.from_id(self.cut_list_generator_database, data['so_item_id'])
         product = Product.from_number(self.cut_list_generator_database, data['product_number'])
-        dialog = CutJobSearchDialog(self.cut_list_generator_database, product=product, parent=self)
-        if dialog.exec():
-            cut_job = dialog.cut_job
-            self.load_cut_job_data(cut_job)
+        cut_jobs = CutJob.from_sales_order_item_id(self.cut_list_generator_database, sales_order_item.id)
+        if len(cut_jobs) == 0:
+            self.load_cut_job_data()
+        else:
+            self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database, product=product, sales_order_item=sales_order_item)
+        
+    
+    def show_cut_job_search_dialog(self, **kwargs):
+        dialog = CutJobSearchDialog(**kwargs)
+        # dialog.rejected.connect(lambda: self.load_cut_job_data())
+        dialog.accepted.connect(lambda: self.load_cut_job_data(dialog.cut_job))
+        dialog.exec()
 
     def get_row_data_from_so_table(self, row_num: int) -> dict:
         so_item_id = int(self.ui.sales_order_table_widget.item(row_num, 0).text())
@@ -174,7 +197,12 @@ class Application(QtWidgets.QMainWindow):
         }
     
     def load_cut_job_data(self, cut_job: CutJob = None):
-        row_data = self.get_row_data_from_so_table(self.ui.sales_order_table_widget.currentRow())
+        row_num = self.ui.sales_order_table_widget.currentRow()
+        if row_num == -1:
+            self.create_cut_job()
+            return
+
+        row_data = self.get_row_data_from_so_table(row_num)
         product = Product.from_number(self.cut_list_generator_database, row_data['product_number'])
         so_item_id = row_data['so_item_id']
         # TODO: Change this it use the cut job id instead of the so item id.
@@ -184,11 +212,14 @@ class Application(QtWidgets.QMainWindow):
             msg = QMessageBox()
             msg.setWindowTitle("Cut Job")
             msg.setIcon(QMessageBox.Information)
-            msg.setText("The selected sales order item does not have a cut job associated with it. Would you like to create one?")
+            msg.setText("Would you like to create a cut job for the selected item?")
+            msg.setInformativeText("Click No to create a blank cut job.")
             msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
             msg.exec()
             if msg.result() == QMessageBox.Yes:
                 self.create_cut_job(product, so_item_id)
+            else:
+                self.create_cut_job()
             return
         self.load_cut_job(cut_job)
         
@@ -202,9 +233,18 @@ class Application(QtWidgets.QMainWindow):
         if dialog.exec():
             dialog.cut_job.save()
             logger.info(f"[CUT JOB] Cut job data saved. Job ID: {dialog.cut_job.id}")
+            if dialog.cut_job.is_cut and dialog.cut_job.related_sales_order_item:
+                logger.info(f"[CUT JOB] Checking if sales order item ID {dialog.cut_job.related_sales_order_item.id} is fully cut.")
+                sales_order_item = dialog.cut_job.related_sales_order_item
+                if sales_order_item.is_fully_cut:
+                    logger.info(f"Sales order item ID {sales_order_item.id} is fully cut.")
+                    sales_order_item.save()
+                else:
+                    logger.info(f"Sales order item ID {sales_order_item.id} is not fully cut.")
+
         
-    def create_cut_job(self, product: Product, linked_so_item_id: int = None):
-        logger.info(f"[CUT JOB] Creating cut job for product: {product.number}")
+    def create_cut_job(self, product: Product = None, linked_so_item_id: int = None):
+        logger.info("[CUT JOB] Creating cut job.")
         # Open a dialog to get the cut job data.
         dialog = CutJobDialog(cut_list_generator_database=self.cut_list_generator_database,
                               fishbowl_database=self.fishbowl_database,

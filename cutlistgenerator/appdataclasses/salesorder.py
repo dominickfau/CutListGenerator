@@ -3,6 +3,7 @@ from . import CutListDatabase
 from .product import Product
 
 
+
 @dataclass
 class SalesOrderItem:
     """Represents a sales order item."""
@@ -55,9 +56,23 @@ class SalesOrderItem:
 
         return self.qty_to_fulfill - self.qty_picked - self.qty_fulfilled
     
+    @property
+    def is_fully_cut(self) -> bool:
+        """Returns true if the item is fully cut."""
+        # TODO: Check that this works as intended.
+        cut_jobs = []
+        data = self.database_connection.get_cut_job_by_so_item_id(self.id)
+        total_qty_cut = 0
+        for cut_job in data:
+            if not cut_job['is_cut']:
+                continue
+            total_qty_cut += cut_job['quantity_cut']
+        self.cut_in_full = total_qty_cut >= self.qty_to_fulfill
+        return self.cut_in_full
+    
     def save(self):
         """Saves the sales order item to the database."""
-
+        x = self.is_fully_cut
         self.id = self.database_connection.save_sales_order_item(self)
     
     def delete(self):
@@ -101,6 +116,15 @@ class SalesOrder:
             sales_order.add_item(sales_order_item)
 
         return sales_order
+    
+    @classmethod
+    def get_number_from_sales_order_item_id(cls, database_connection: CutListDatabase, sales_order_item_id: int) -> str:
+        """Returns the sales order number from a sales order item ID."""
+
+        data = database_connection.get_sales_order_by_sales_order_item_id(sales_order_item_id)
+        if not data:
+            return None
+        return data['sales_order']['number']
 
     @classmethod
     def find_by_number(cls, database_connection: CutListDatabase, number: str) -> 'SalesOrder':
