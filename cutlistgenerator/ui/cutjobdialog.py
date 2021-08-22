@@ -65,6 +65,15 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
         self.find_so_item_push_button.clicked.connect(self.on_find_so_item_clicked)
         self.remove_linked_so_item_push_button.clicked.connect(self.on_remove_linked_so_item_clicked)
 
+        # Initial set datetime to current datetime.
+        current_date_time = QDateTime.fromString(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
+        self.cut_start_date_time_edit.setDateTime(current_date_time)
+        self.cut_end_date_time_edit.setDateTime(current_date_time)
+        self.termination_start_date_time_edit.setDateTime(current_date_time)
+        self.termination_end_date_time_edit.setDateTime(current_date_time)
+        self.splice_start_date_time_edit.setDateTime(current_date_time)
+        self.splice_end_date_time_edit.setDateTime(current_date_time)
+
     def load_cut_job(self, cut_job: CutJob):
         """Loads a cut job into the dialog."""
         self.unlink_sales_order_item()
@@ -74,17 +83,7 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
         self.product_number_combo_box.setCurrentText(cut_job.product.number)
         self.wire_cutter_name_combo_box.setCurrentText(cut_job.assigned_wire_cutter.name)
 
-        current_date_time = QDateTime.fromString(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
-        
         # Cutting
-        # Initial set datetime to current datetime.
-        self.cut_start_date_time_edit.setDateTime(current_date_time)
-        self.cut_end_date_time_edit.setDateTime(current_date_time)
-        self.termination_start_date_time_edit.setDateTime(current_date_time)
-        self.termination_end_date_time_edit.setDateTime(current_date_time)
-        self.splice_start_date_time_edit.setDateTime(current_date_time)
-        self.splice_end_date_time_edit.setDateTime(current_date_time)
-
         if cut_job.date_cut_start:
             self.cutting_group_box.setChecked(True)
             self.qty_cut_spin_box.setValue(cut_job.quantity_cut)
