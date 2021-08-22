@@ -82,7 +82,9 @@ class CutJob:
             wire_cutter_id = cut_job_data.pop('assigned_wire_cutter_id')
             wire_cutter = WireCutter.from_id(database_connection, wire_cutter_id)
             sales_order_item_id = cut_job_data.pop('related_sales_order_item_id')
-            related_sales_order_item = SalesOrderItem.from_id(database_connection, sales_order_item_id)
+            related_sales_order_item = None
+            if sales_order_item_id != None:
+                related_sales_order_item = SalesOrderItem.from_id(database_connection, sales_order_item_id)
             cut_job = cls(database_connection, product, wire_cutter, related_sales_order_item, **cut_job_data)
             cut_jobs.append(cut_job)
         return cut_jobs
