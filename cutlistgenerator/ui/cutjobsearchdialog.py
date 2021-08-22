@@ -103,13 +103,14 @@ class CutJobSearchDialog(Ui_cut_job_search_dialog, QDialog):
         table_data = CutJob.get_all_open(self.cut_list_generator_database)
         self.cut_job_table_widget.setRowCount(len(table_data))
 
-        for row, cut_job in enumerate(table_data):
+        row = 0
+        for cut_job in table_data:
             so_number = "N/A"
             if cut_job.related_sales_order_item:
                 so_number_value = SalesOrder.get_number_from_sales_order_item_id(self.cut_list_generator_database, cut_job.related_sales_order_item.id)
                 so_number = f"{so_number_value} Line: {cut_job.related_sales_order_item.line_number}"
             
-            if search_data["product_number"] != None and search_data["product_number"] != cut_job.product.number:
+            if search_data["product_number"] != "" and search_data["product_number"] != cut_job.product.number:
                 continue
             if search_data["wire_cutter_name"] != "" and search_data["wire_cutter_name"] != cut_job.assigned_wire_cutter.name:
                 continue
@@ -118,24 +119,24 @@ class CutJobSearchDialog(Ui_cut_job_search_dialog, QDialog):
             if search_data["sales_order_number"] != None and search_data["sales_order_number"] != so_number_value:
                 continue
             
-            self.add_row_to_table(row, cut_job, so_number)
-            
-
-    def add_row_to_table(self, row, cut_job, so_number):
-        self.cut_job_table_widget.setItem(row, 0, QTableWidgetItem(str(cut_job.id)))
-        self.cut_job_table_widget.setColumnWidth(0, 50)
-        self.cut_job_table_widget.setItem(row, 1, QTableWidgetItem(str(cut_job.date_created.date())))
-        self.cut_job_table_widget.setItem(row, 2, QTableWidgetItem(str(cut_job.product.number)))
-        self.cut_job_table_widget.setItem(row, 3, QTableWidgetItem(so_number))
-        self.cut_job_table_widget.setItem(row, 4, QTableWidgetItem(str(cut_job.assigned_wire_cutter.name)))
-        self.cut_job_table_widget.setItem(row, 5, QTableWidgetItem(str(cut_job.quantity_cut)))
-        self.cut_job_table_widget.setItem(row, 6, QTableWidgetItem(str(cut_job.date_cut_start)))
-        self.cut_job_table_widget.setItem(row, 7, QTableWidgetItem(str(cut_job.date_cut_end)))
-        self.cut_job_table_widget.setItem(row, 8, QTableWidgetItem(str(cut_job.date_termination_start)))
-        self.cut_job_table_widget.setItem(row, 9, QTableWidgetItem(str(cut_job.date_termination_end)))
-        self.cut_job_table_widget.setItem(row, 10, QTableWidgetItem(str(cut_job.date_splice_start)))
-        self.cut_job_table_widget.setItem(row, 11, QTableWidgetItem(str(cut_job.date_splice_end)))
-        self.cut_job_table_widget.setItem(row, 12, QTableWidgetItem(str(cut_job.is_ready_for_build)))
+            self.cut_job_table_widget.setItem(row, 0, QTableWidgetItem(str(cut_job.id)))
+            self.cut_job_table_widget.setColumnWidth(0, 50)
+            self.cut_job_table_widget.setItem(row, 1, QTableWidgetItem(str(cut_job.date_created.date())))
+            self.cut_job_table_widget.setItem(row, 2, QTableWidgetItem(str(cut_job.product.number)))
+            self.cut_job_table_widget.setItem(row, 3, QTableWidgetItem(so_number))
+            self.cut_job_table_widget.setItem(row, 4, QTableWidgetItem(str(cut_job.assigned_wire_cutter.name)))
+            self.cut_job_table_widget.setItem(row, 5, QTableWidgetItem(str(cut_job.quantity_cut)))
+            self.cut_job_table_widget.setItem(row, 6, QTableWidgetItem(str(cut_job.date_cut_start)))
+            self.cut_job_table_widget.setItem(row, 7, QTableWidgetItem(str(cut_job.date_cut_end)))
+            self.cut_job_table_widget.setItem(row, 8, QTableWidgetItem(str(cut_job.date_termination_start)))
+            self.cut_job_table_widget.setItem(row, 9, QTableWidgetItem(str(cut_job.date_termination_end)))
+            self.cut_job_table_widget.setItem(row, 10, QTableWidgetItem(str(cut_job.date_splice_start)))
+            self.cut_job_table_widget.setItem(row, 11, QTableWidgetItem(str(cut_job.date_splice_end)))
+            self.cut_job_table_widget.setItem(row, 12, QTableWidgetItem(str(cut_job.is_ready_for_build)))
+            row += 1
+        
+        # This removes any blank rows at the end of the table.
+        self.cut_job_table_widget.setRowCount(row)
 
     def validate_form(self):
         """Validates the form data."""
