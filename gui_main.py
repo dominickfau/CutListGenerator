@@ -288,7 +288,7 @@ class Application(QtWidgets.QMainWindow):
 
     def load_so_table_data(self):
         # TODO: Move this to a thread.
-        logger.debug("[SEARCH] Loading SO data into table.")
+        logger.debug("[LOAD TABLE] Loading SO data into table.")
         search_data = self.get_so_search_data()
         self.clear_table(self.ui.sales_order_table_widget)
 
@@ -306,10 +306,14 @@ class Application(QtWidgets.QMainWindow):
             qty_scheduled_to_cut = int(sales_order_item.qty_scheduled_to_cut)
 
             column_index = self.headers['Qty Left To Cut']['index']
+            width = self.headers['Qty Left To Cut']['width']
             self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(qty_left_to_cut)))
+            self.ui.sales_order_table_widget.setColumnWidth(column_index, width)
 
             column_index = self.headers['Qty Scheduled To Cut']['index']
+            width = self.headers['Qty Scheduled To Cut']['width']
             self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(qty_scheduled_to_cut)))
+            self.ui.sales_order_table_widget.setColumnWidth(column_index, width)
 
             for key in row:
                 # Id, Due Date, Customer Name, SO Number, Product Number, Description, Qty Left To Ship, Line Number, Fully Cut, Parent Number, Parent Description

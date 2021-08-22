@@ -153,6 +153,10 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
             form_valid = False
             message.append("Select a wire cutter.")
         
+        if self.qty_cut_spin_box.value() == 0:
+            form_valid = False
+            message.append("Cut quantity must be greater than 0.")
+        
         return form_valid, message
 
     def on_add_product_clicked(self):
