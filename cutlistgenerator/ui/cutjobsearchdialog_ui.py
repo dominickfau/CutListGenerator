@@ -121,6 +121,8 @@ class Ui_cut_job_search_dialog(object):
         self.label_3.setBuddy(self.find_so_item_push_button)
 
         self.retranslateUi(cut_job_search_dialog)
+        self.product_number_combo_box.currentTextChanged['QString'].connect(self.search_push_button.click)
+        self.wire_cutter_name_combo_box.currentTextChanged['QString'].connect(self.search_push_button.click)
         QtCore.QMetaObject.connectSlotsByName(cut_job_search_dialog)
 
     def retranslateUi(self, cut_job_search_dialog):

@@ -243,5 +243,38 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>product_number_combo_box</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>search_push_button</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>581</x>
+     <y>19</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>538</x>
+     <y>136</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>wire_cutter_name_combo_box</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>search_push_button</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>581</x>
+     <y>45</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>538</x>
+     <y>136</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
