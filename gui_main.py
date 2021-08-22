@@ -133,6 +133,8 @@ class Application(QtWidgets.QMainWindow):
 
         if include_finished:
             include_finished = "%"
+        else:
+            include_finished = 0
         
         if len(product_number) == 0:
             product_number = "%"
@@ -241,6 +243,7 @@ class Application(QtWidgets.QMainWindow):
                     sales_order_item.save()
                 else:
                     logger.info(f"Sales order item ID {sales_order_item.id} is not fully cut.")
+        self.load_so_table_data()
 
         
     def create_cut_job(self, product: Product = None, linked_so_item_id: int = None):
@@ -254,6 +257,7 @@ class Application(QtWidgets.QMainWindow):
         if dialog.exec():
             dialog.cut_job.save()
             logger.info(f"[CUT JOB] Cut job data saved. Job ID: {dialog.cut_job.id}")
+        self.load_so_table_data()
 
     def clear_table(self, tableWidget):
         logger.debug("[TABLE] Clearing table.")
@@ -265,6 +269,8 @@ class Application(QtWidgets.QMainWindow):
         self.clear_table(self.ui.sales_order_table_widget)
 
         # TODO: Remove this when we have a better way of getting the data.
+        # FIXME: Check if items that are not fully cut are being loaded.
+        # TODO: Check that Include Finished checkbox is working.
         table_data = self.cut_list_generator_database.get_sales_order_table_data(search_data)
         self.ui.sales_order_table_widget.setRowCount(len(table_data))
         logger.debug(f"[SEARCH] Found {len(table_data)} rows of data.")

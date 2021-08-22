@@ -67,7 +67,7 @@ class SalesOrderItem:
             if not cut_job['is_cut']:
                 continue
             total_qty_cut += cut_job['quantity_cut']
-        self.cut_in_full = total_qty_cut >= self.qty_to_fulfill
+        self.cut_in_full = total_qty_cut >= self.quantity_left_to_ship
         return self.cut_in_full
     
     def save(self):
