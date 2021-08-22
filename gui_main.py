@@ -1,9 +1,9 @@
-from cutlistgenerator.appdataclasses.salesorder import SalesOrderItem
+from cutlistgenerator.appdataclasses.salesorder import SalesOrder, SalesOrderItem
 from cutlistgenerator.appdataclasses import product
 from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 import sys, os, traceback, datetime
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QMessageBox, QProgressBar
+from PyQt5.QtWidgets import QApplication, QMessageBox, QProgressBar, QPushButton
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSlot, pyqtSignal, QObject
 
 
@@ -178,7 +178,31 @@ class Application(QtWidgets.QMainWindow):
 
         return {'product_number': product_number, 'cut_in_full': include_finished, 'so_number': so_number}
     
+    def ask_user_direction_for_selected_row(self, sales_order_item: SalesOrderItem):
+        """Asks the user if they want to create a cut job for the selected sales order. Returns what the user wants to do."""
+        sales_order_number = SalesOrder.get_number_from_sales_order_item_id(self.cut_list_generator_database, sales_order_item.id)
+        cut_jobs = CutJob.from_sales_order_item_id(self.cut_list_generator_database, sales_order_item.id)
+
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Question)
+        msg.setInformativeText("What would you like to do?")
+        if len(cut_jobs) == 0:
+            msg.setText(f"The selected sales order ({sales_order_number}) has no cut jobs.")
+            msg.setWindowTitle("Cut Job Creation")
+            msg.addButton(QPushButton('Create New'), QMessageBox.YesRole)
+            msg.addButton(QPushButton('Cancel'), QMessageBox.RejectRole)
+        else:
+            msg.setText(f"The selected sales order ({sales_order_number}) has cut jobs.")
+            msg.setWindowTitle("Cut Job Selection")
+            msg.addButton(QPushButton('Select Existing'), QMessageBox.NoRole)
+            msg.addButton(QPushButton('Create New'), QMessageBox.YesRole)
+            msg.addButton(QPushButton('Cancel'), QMessageBox.RejectRole)
+
+        msg.exec()
+        return msg.buttonRole(msg.clickedButton())
+
     def on_view_button_clicked(self):
+        """Called when the view button is clicked."""
         row_num = self.ui.sales_order_table_widget.currentRow()
         if row_num == -1:
             msg = QMessageBox()
@@ -189,29 +213,30 @@ class Application(QtWidgets.QMainWindow):
             msg.exec()
             return
 
-        data = self.get_row_data_from_so_table(row_num)
-        sales_order_item = SalesOrderItem.from_id(self.cut_list_generator_database, data['so_item_id'])
-        product = Product.from_number(self.cut_list_generator_database, data['product_number'])
-        cut_jobs = CutJob.from_sales_order_item_id(self.cut_list_generator_database, sales_order_item.id)
-        if len(cut_jobs) == 0:
-            self.load_cut_job_data()
-        else:
-            self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database, product=product, sales_order_item=sales_order_item, parent=self)
+        row_data = self.get_row_data_from_so_table(row_num)
+        self.check_selected_row_for_cut_jobs(row_data)
 
     def on_so_table_row_double_clicked(self, row):
+        """Callback for when a row is double clicked in the sales order table."""
         row_num = row.row()
-        data = self.get_row_data_from_so_table(row_num)
-        sales_order_item = SalesOrderItem.from_id(self.cut_list_generator_database, data['so_item_id'])
-        product = Product.from_number(self.cut_list_generator_database, data['product_number'])
-        cut_jobs = CutJob.from_sales_order_item_id(self.cut_list_generator_database, sales_order_item.id)
-        if len(cut_jobs) == 0:
-            self.load_cut_job_data()
+        row_data = self.get_row_data_from_so_table(row_num)
+        self.check_selected_row_for_cut_jobs(row_data)
+    
+    def check_selected_row_for_cut_jobs(self, selected_row_data):
+        """Checks if the selected row has a cut job already created. Then asks the user what they want to do. Ether create a new cut job or select an existing cut job."""
+        sales_order_item = SalesOrderItem.from_id(self.cut_list_generator_database, selected_row_data['so_item_id'])
+        product = Product.from_number(self.cut_list_generator_database, selected_row_data['product_number'])
+        reply = self.ask_user_direction_for_selected_row(sales_order_item)
+        if reply == QMessageBox.NoRole:
+            self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database, product=product, sales_order_item=sales_order_item, parent=self)
+        elif reply == QMessageBox.YesRole:
+            self.create_cut_job()
         else:
-            self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database, product=product, sales_order_item=sales_order_item)
+            return
         
     def show_cut_job_search_dialog(self, **kwargs):
+        """Shows the cut job search dialog. Passes the keyword arguments to the dialog."""
         dialog = CutJobSearchDialog(**kwargs)
-        # dialog.rejected.connect(lambda: self.load_cut_job_data())
         dialog.accepted.connect(lambda: self.load_cut_job(dialog.cut_job))
         dialog.exec()
 
@@ -224,33 +249,6 @@ class Application(QtWidgets.QMainWindow):
             'so_number': so_number,
             'product_number': product_number
         }
-    
-    def load_cut_job_data(self, cut_job: CutJob = None):
-        row_num = self.ui.sales_order_table_widget.currentRow()
-        if row_num == -1:
-            self.create_cut_job()
-            return
-
-        row_data = self.get_row_data_from_so_table(row_num)
-        product = Product.from_number(self.cut_list_generator_database, row_data['product_number'])
-        so_item_id = row_data['so_item_id']
-        # TODO: Change this it use the cut job id instead of the so item id.
-        # logger.debug(f"[CUT JOB] Loading cut job data for sales order item ID: {so_item_id}'")
-        if not cut_job:
-            # logger.info(f"[CUT JOB] No cut job data found for sales order item ID: {so_item_id}")
-            msg = QMessageBox()
-            msg.setWindowTitle("Cut Job")
-            msg.setIcon(QMessageBox.Information)
-            msg.setText("Would you like to create a cut job for the selected item?")
-            msg.setInformativeText("Click No to create a blank cut job.")
-            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-            msg.exec()
-            if msg.result() == QMessageBox.Yes:
-                self.create_cut_job(product, so_item_id)
-            else:
-                self.create_cut_job()
-            return
-        self.load_cut_job(cut_job)
         
     def load_cut_job(self, cut_job: CutJob):
         logger.info(f"[CUT JOB] Loading cut job ID: {cut_job.id}")
