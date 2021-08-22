@@ -24,6 +24,13 @@ class Product:
 
         if self.unit_price_dollars is None:
             self.unit_price_dollars = 0.0
+    
+    @property
+    def kit_flag_as_string(self) -> str:
+        """Returns the kit flag as a string."""
+        if self.kit_flag:
+            return "Yes"
+        return "No"
 
     @staticmethod
     def find_parent_kit_product_from_child_product_data(database_connection, product_data: dict) -> dict:

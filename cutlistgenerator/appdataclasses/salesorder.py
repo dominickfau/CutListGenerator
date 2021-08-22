@@ -71,6 +71,13 @@ class SalesOrderItem:
         return total_qty_cut >= self.quantity_left_to_ship
     
     @property
+    def cut_in_full_as_string(self) -> str:
+        """Returns a string indicating whether the item is fully cut."""
+        if self.cut_in_full:
+            return "Yes"
+        return "No"
+    
+    @property
     def qty_left_to_cut(self) -> float:
         """Returns total quantity left to cut."""
         # TODO: Check that this works as intended.

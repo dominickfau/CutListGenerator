@@ -18,8 +18,7 @@ class SystemProperty:
 
         if self.date_last_modified is None:
             self.date_last_modified = datetime.datetime.now()
-        
-
+    
     def __repr__(self) -> str:
         """Returns the representation of the system property."""
         
@@ -28,6 +27,20 @@ class SystemProperty:
     def __str__(self) -> str:
         """Returns the string representation of the system property."""
         return f"{self.name} = {self.value}"
+    
+    @property
+    def visible_as_string(self) -> str:
+        """Returns the system property's visibility as a string."""
+        if self.visible:
+            return "Yes"
+        return "No"
+    
+    @property
+    def read_only_as_string(self) -> str:
+        """Returns the system property's read only status as a string."""
+        if self.read_only:
+            return "Yes"
+        return "No"
     
     @classmethod
     def find_by_name(cls, database_connection: CutListDatabase, name: str) -> 'SystemProperty':

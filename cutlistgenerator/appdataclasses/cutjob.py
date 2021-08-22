@@ -31,6 +31,34 @@ class CutJob:
     def __post_init__(self):
         if self.date_created == None:
             self.date_created = datetime.datetime.now()
+    
+    @property
+    def is_ready_for_build_as_string(self):
+        """Returns a string indicating if the cut job is ready for build."""
+        if self.is_ready_for_build:
+            return "Yes"
+        return "No"
+    
+    @property
+    def is_cut_as_string(self):
+        """Returns a string indicating if the cut job is cut."""
+        if self.is_cut:
+            return "Yes"
+        return "No"
+    
+    @property
+    def is_terminated_as_string(self):
+        """Returns a string indicating if the cut job is terminated."""
+        if self.is_terminated:
+            return "Yes"
+        return "No"
+    
+    @property
+    def is_spliced_as_string(self):
+        """Returns a string indicating if the cut job is spliced."""
+        if self.is_spliced:
+            return "Yes"
+        return "No"
         
     @classmethod
     def from_id(cls, database_connection: CutListDatabase, id: int):

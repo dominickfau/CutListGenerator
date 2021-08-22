@@ -118,21 +118,21 @@ class CutJobSearchDialog(Ui_cut_job_search_dialog, QDialog):
                 continue
             if search_data["sales_order_number"] != None and search_data["sales_order_number"] != so_number_value:
                 continue
-            
+
             self.cut_job_table_widget.setItem(row, 0, QTableWidgetItem(str(cut_job.id)))
             self.cut_job_table_widget.setColumnWidth(0, 50)
             self.cut_job_table_widget.setItem(row, 1, QTableWidgetItem(str(cut_job.date_created.date())))
             self.cut_job_table_widget.setItem(row, 2, QTableWidgetItem(str(cut_job.product.number)))
             self.cut_job_table_widget.setItem(row, 3, QTableWidgetItem(so_number))
             self.cut_job_table_widget.setItem(row, 4, QTableWidgetItem(str(cut_job.assigned_wire_cutter.name)))
-            self.cut_job_table_widget.setItem(row, 5, QTableWidgetItem(str(cut_job.quantity_cut)))
+            self.cut_job_table_widget.setItem(row, 5, QTableWidgetItem(str(int(cut_job.quantity_cut))))
             self.cut_job_table_widget.setItem(row, 6, QTableWidgetItem(str(cut_job.date_cut_start)))
             self.cut_job_table_widget.setItem(row, 7, QTableWidgetItem(str(cut_job.date_cut_end)))
             self.cut_job_table_widget.setItem(row, 8, QTableWidgetItem(str(cut_job.date_termination_start)))
             self.cut_job_table_widget.setItem(row, 9, QTableWidgetItem(str(cut_job.date_termination_end)))
             self.cut_job_table_widget.setItem(row, 10, QTableWidgetItem(str(cut_job.date_splice_start)))
             self.cut_job_table_widget.setItem(row, 11, QTableWidgetItem(str(cut_job.date_splice_end)))
-            self.cut_job_table_widget.setItem(row, 12, QTableWidgetItem(str(cut_job.is_ready_for_build)))
+            self.cut_job_table_widget.setItem(row, 12, QTableWidgetItem(str(cut_job.is_ready_for_build_as_string)))
             row += 1
         
         # This removes any blank rows at the end of the table.
