@@ -24,7 +24,11 @@
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="QLineEdit" name="lineEdit"/>
+      <widget class="QLineEdit" name="lineEdit">
+       <property name="toolTip">
+        <string>Number for this product. This must be unique for each product.</string>
+       </property>
+      </widget>
      </item>
      <item row="1" column="0">
       <widget class="QLabel" name="label_2">
@@ -37,6 +41,9 @@
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
         <widget class="QDoubleSpinBox" name="doubleSpinBox">
+         <property name="toolTip">
+          <string>The sell price for one unit.</string>
+         </property>
          <property name="buttonSymbols">
           <enum>QAbstractSpinBox::NoButtons</enum>
          </property>
@@ -74,6 +81,9 @@
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <item>
         <widget class="QComboBox" name="comboBox">
+         <property name="toolTip">
+          <string>Unit of mesure for this product.</string>
+         </property>
          <item>
           <property name="text">
            <string>Ea</string>
@@ -104,12 +114,19 @@
       </widget>
      </item>
      <item row="3" column="1">
-      <widget class="QPlainTextEdit" name="plainTextEdit"/>
+      <widget class="QPlainTextEdit" name="plainTextEdit">
+       <property name="toolTip">
+        <string>A description and or details for this product.</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
    <item>
     <widget class="QGroupBox" name="groupBox">
+     <property name="toolTip">
+      <string>Check this to link a parent product to this product. The parent product is what would be on the customers SO.</string>
+     </property>
      <property name="title">
       <string>Parent Product</string>
      </property>
@@ -128,13 +145,20 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QComboBox" name="comboBox_2"/>
+       <widget class="QComboBox" name="comboBox_2">
+        <property name="toolTip">
+         <string>Select a parent product number.</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>
    </item>
    <item>
     <widget class="QPushButton" name="pushButton">
+     <property name="toolTip">
+      <string>Save this product.</string>
+     </property>
      <property name="text">
       <string>Save</string>
      </property>

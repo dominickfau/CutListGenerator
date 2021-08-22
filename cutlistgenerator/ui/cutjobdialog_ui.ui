@@ -54,6 +54,9 @@
          <layout class="QHBoxLayout" name="horizontalLayout_3">
           <item>
            <widget class="QComboBox" name="product_number_combo_box">
+            <property name="toolTip">
+             <string>Select a product to cut.</string>
+            </property>
             <property name="editable">
              <bool>true</bool>
             </property>
@@ -76,6 +79,9 @@
               <height>23</height>
              </size>
             </property>
+            <property name="toolTip">
+             <string>Creates a new product. If a product is selected a editing window will open.</string>
+            </property>
             <property name="text">
              <string>Add / Edit</string>
             </property>
@@ -97,6 +103,9 @@
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
            <widget class="QComboBox" name="wire_cutter_name_combo_box">
+            <property name="toolTip">
+             <string>Select a wire cutter to cut this job.</string>
+            </property>
             <property name="editable">
              <bool>false</bool>
             </property>
@@ -115,6 +124,9 @@
               <width>65</width>
               <height>23</height>
              </size>
+            </property>
+            <property name="toolTip">
+             <string>Creates a new wire cutter. If a wire cutter is selected a editing window will open.</string>
             </property>
             <property name="text">
              <string>Add / Edit</string>
@@ -206,6 +218,9 @@
                 <height>16777215</height>
                </size>
               </property>
+              <property name="toolTip">
+               <string>Open a search window to find a SO item to link to this job.</string>
+              </property>
               <property name="text">
                <string>Find</string>
               </property>
@@ -218,6 +233,9 @@
                 <width>55</width>
                 <height>16777215</height>
                </size>
+              </property>
+              <property name="toolTip">
+               <string>Removes the linked SO item.</string>
               </property>
               <property name="text">
                <string>Remove</string>
@@ -235,6 +253,9 @@
    </item>
    <item row="1" column="0" rowspan="2">
     <widget class="QGroupBox" name="cutting_group_box">
+     <property name="toolTip">
+      <string>Check this to signify that this job is beeing cut.</string>
+     </property>
      <property name="title">
       <string>1: Cuting</string>
      </property>
@@ -259,6 +280,12 @@
         </item>
         <item row="0" column="1">
          <widget class="QSpinBox" name="qty_cut_spin_box">
+          <property name="acceptDrops">
+           <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>Amount that was cut.</string>
+          </property>
           <property name="maximum">
            <number>10000</number>
           </property>
@@ -275,12 +302,19 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QDateTimeEdit" name="cut_start_date_time_edit"/>
+         <widget class="QDateTimeEdit" name="cut_start_date_time_edit">
+          <property name="toolTip">
+           <string>Date and time that cutting for this job started.</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
       <item>
        <widget class="QGroupBox" name="cutting_finished_group_box">
+        <property name="toolTip">
+         <string>Check this to signify that cutting for this job is finished.</string>
+        </property>
         <property name="title">
          <string>Finished</string>
         </property>
@@ -302,7 +336,11 @@
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QDateTimeEdit" name="cut_end_date_time_edit"/>
+          <widget class="QDateTimeEdit" name="cut_end_date_time_edit">
+           <property name="toolTip">
+            <string>Date and time that cutting for this job ended.</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -312,6 +350,9 @@
    </item>
    <item row="1" column="1">
     <widget class="QGroupBox" name="termination_group_box">
+     <property name="toolTip">
+      <string>Check this to signify that this job is beeing terminated.</string>
+     </property>
      <property name="title">
       <string>2: Termination</string>
      </property>
@@ -335,12 +376,19 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QDateTimeEdit" name="termination_start_date_time_edit"/>
+         <widget class="QDateTimeEdit" name="termination_start_date_time_edit">
+          <property name="toolTip">
+           <string>Date and time that termination for this job started.</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
       <item>
        <widget class="QGroupBox" name="termination_finished_group_box">
+        <property name="toolTip">
+         <string>Check this to signify that termination for this job is finished.</string>
+        </property>
         <property name="title">
          <string>Finished</string>
         </property>
@@ -362,7 +410,11 @@
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QDateTimeEdit" name="termination_end_date_time_edit"/>
+          <widget class="QDateTimeEdit" name="termination_end_date_time_edit">
+           <property name="toolTip">
+            <string>Date and time that termination for this job ended.</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -378,6 +430,9 @@
        <height>100</height>
       </size>
      </property>
+     <property name="toolTip">
+      <string>Save this cut job.</string>
+     </property>
      <property name="text">
       <string>Save</string>
      </property>
@@ -385,6 +440,9 @@
    </item>
    <item row="3" column="0">
     <widget class="QGroupBox" name="splice_group_box">
+     <property name="toolTip">
+      <string>Check this to signify that this job is beeing spliced.</string>
+     </property>
      <property name="title">
       <string>3: Splice</string>
      </property>
@@ -408,12 +466,19 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QDateTimeEdit" name="splice_start_date_time_edit"/>
+         <widget class="QDateTimeEdit" name="splice_start_date_time_edit">
+          <property name="toolTip">
+           <string>Date and time that splicing for this job started.</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
       <item>
        <widget class="QGroupBox" name="splice_finished_group_box">
+        <property name="toolTip">
+         <string>Check this to signify that splicing for this job is finished.</string>
+        </property>
         <property name="title">
          <string>Finished</string>
         </property>
@@ -435,7 +500,11 @@
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QDateTimeEdit" name="splice_end_date_time_edit"/>
+          <widget class="QDateTimeEdit" name="splice_end_date_time_edit">
+           <property name="toolTip">
+            <string>Date and time that splicing for this job ended.</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>

@@ -25,6 +25,9 @@
      </item>
      <item row="0" column="1">
       <widget class="QComboBox" name="product_number_combo_box">
+       <property name="toolTip">
+        <string>Enter a product number to find. Search results will be filtered as you type.</string>
+       </property>
        <property name="editable">
         <bool>true</bool>
        </property>
@@ -45,6 +48,9 @@
      </item>
      <item row="1" column="1">
       <widget class="QComboBox" name="wire_cutter_name_combo_box">
+       <property name="toolTip">
+        <string>Select a wire cutter to find. Select the blank option to show all.</string>
+       </property>
        <property name="editable">
         <bool>false</bool>
        </property>
@@ -124,6 +130,9 @@
              <height>16777215</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>Filter cut jobs linked to a SO item.</string>
+           </property>
            <property name="text">
             <string>Find</string>
            </property>
@@ -136,6 +145,9 @@
              <width>55</width>
              <height>16777215</height>
             </size>
+           </property>
+           <property name="toolTip">
+            <string>Removes the SO item filter.</string>
            </property>
            <property name="text">
             <string>Remove</string>
@@ -150,6 +162,9 @@
    </item>
    <item>
     <widget class="QPushButton" name="search_push_button">
+     <property name="toolTip">
+      <string>Search for cut jobs matching fields above.</string>
+     </property>
      <property name="text">
       <string>Search</string>
      </property>
@@ -235,6 +250,9 @@
    </item>
    <item>
     <widget class="QPushButton" name="select_push_button">
+     <property name="toolTip">
+      <string>Opens the selected cut job.</string>
+     </property>
      <property name="text">
       <string>Select</string>
      </property>
