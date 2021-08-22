@@ -120,6 +120,7 @@ class Ui_cut_job_dialog(object):
         self.label_4.setObjectName("label_4")
         self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label_4)
         self.qty_cut_spin_box = QtWidgets.QSpinBox(self.cutting_group_box)
+        self.qty_cut_spin_box.setMaximum(10000)
         self.qty_cut_spin_box.setObjectName("qty_cut_spin_box")
         self.formLayout_3.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.qty_cut_spin_box)
         self.label_5 = QtWidgets.QLabel(self.cutting_group_box)

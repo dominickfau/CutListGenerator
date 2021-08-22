@@ -791,25 +791,45 @@ class MySQLDatabaseConnection(CutListDatabase):
                 'cut_in_full': 0,
             }
 
-        cursor.execute("""SELECT sales_order_item.id AS so_item_id,
-                            DATE_FORMAT(sales_order_item.due_date, "%c-%e-%Y") AS due_date,
-                            sales_order.customer_name AS customer_name,
-                            sales_order.number AS so_number,
-                            product.number AS product_number,
-                            product.description AS product_description,
-                            -- product.unit_price_dollars AS unit_price,
-                            TRIM((sales_order_item.qty_to_fulfill - sales_order_item.qty_fulfilled - sales_order_item.qty_picked))+0 AS qty_left_to_ship,
-                            -- product.uom AS uom,
-                            sales_order_item.line_number AS line_number,
-                            product.kit_flag AS is_child_item,
-                            sales_order_item.cut_in_full AS cut_in_full
-                        FROM sales_order
-                        JOIN sales_order_item ON sales_order_item.sales_order_id = sales_order.id
-                        JOIN product ON sales_order_item.product_id = product.id
-                        WHERE sales_order_item.cut_in_full = %(cut_in_full)s
-                        AND product.number LIKE%(product_number)s
-                        AND sales_order.number LIKE%(so_number)s
-                        ORDER BY product.number, sales_order_item.due_date""", search_data)
+        if search_data['cut_in_full'] != '%':
+            cursor.execute("""SELECT sales_order_item.id AS so_item_id,
+                                DATE_FORMAT(sales_order_item.due_date, "%c-%e-%Y") AS due_date,
+                                sales_order.customer_name AS customer_name,
+                                sales_order.number AS so_number,
+                                product.number AS product_number,
+                                product.description AS product_description,
+                                -- product.unit_price_dollars AS unit_price,
+                                TRIM((sales_order_item.qty_to_fulfill - sales_order_item.qty_fulfilled - sales_order_item.qty_picked))+0 AS qty_left_to_ship,
+                                -- product.uom AS uom,
+                                sales_order_item.line_number AS line_number,
+                                product.kit_flag AS is_child_item,
+                                sales_order_item.cut_in_full AS cut_in_full
+                            FROM sales_order
+                            JOIN sales_order_item ON sales_order_item.sales_order_id = sales_order.id
+                            JOIN product ON sales_order_item.product_id = product.id
+                            WHERE sales_order_item.cut_in_full = 0
+                            AND product.number LIKE%(product_number)s
+                            AND sales_order.number LIKE%(so_number)s
+                            ORDER BY product.number, sales_order_item.due_date""", search_data)
+        else:
+            cursor.execute("""SELECT sales_order_item.id AS so_item_id,
+                                DATE_FORMAT(sales_order_item.due_date, "%c-%e-%Y") AS due_date,
+                                sales_order.customer_name AS customer_name,
+                                sales_order.number AS so_number,
+                                product.number AS product_number,
+                                product.description AS product_description,
+                                -- product.unit_price_dollars AS unit_price,
+                                TRIM((sales_order_item.qty_to_fulfill - sales_order_item.qty_fulfilled - sales_order_item.qty_picked))+0 AS qty_left_to_ship,
+                                -- product.uom AS uom,
+                                sales_order_item.line_number AS line_number,
+                                product.kit_flag AS is_child_item,
+                                sales_order_item.cut_in_full AS cut_in_full
+                            FROM sales_order
+                            JOIN sales_order_item ON sales_order_item.sales_order_id = sales_order.id
+                            JOIN product ON sales_order_item.product_id = product.id
+                            WHERE product.number LIKE%(product_number)s
+                            AND sales_order.number LIKE%(so_number)s
+                            ORDER BY product.number, sales_order_item.due_date""", search_data)
 
         sales_order_table_data = cursor.fetchall()
         cursor.close()
