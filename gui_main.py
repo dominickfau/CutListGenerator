@@ -287,6 +287,7 @@ class Application(QtWidgets.QMainWindow):
         return max_width
 
     def load_so_table_data(self):
+        # TODO: Move this to a thread.
         logger.debug("[SEARCH] Loading SO data into table.")
         search_data = self.get_so_search_data()
         self.clear_table(self.ui.sales_order_table_widget)
@@ -317,6 +318,12 @@ class Application(QtWidgets.QMainWindow):
                     value = ''
                 if key == 'Qty Left To Ship':
                     value = int(value)
+                elif key == 'Fully Cut':
+                    if value == True:
+                        value = "Yes"
+                    else:
+                        value = "No"
+
                 column_index = self.headers[key]['index']
                 # width = self.get_max_width_for_column(table_data, key) * 2
                 width = self.headers[key]['width']
