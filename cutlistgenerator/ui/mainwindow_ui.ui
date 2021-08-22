@@ -130,6 +130,11 @@
       </column>
       <column>
        <property name="text">
+        <string>Qty Scheduled To Cut</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
         <string>Fully Cut</string>
        </property>
       </column>

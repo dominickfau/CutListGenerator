@@ -83,6 +83,19 @@ class SalesOrderItem:
             total_qty_cut += cut_job['quantity_cut']
         return self.quantity_left_to_ship - total_qty_cut
     
+    @property
+    def qty_scheduled_to_cut(self) -> float:
+        """Returns the quantity scheduled to be cut."""
+        # TODO: Check that this works as intended.
+        cut_jobs = []
+        data = self.database_connection.get_cut_jobs_by_so_item_id(self.id)
+        total_qty_cut = 0
+        for cut_job in data:
+            if cut_job['is_cut']:
+                continue
+            total_qty_cut += cut_job['quantity_cut']
+        return total_qty_cut
+    
     def save(self):
         """Saves the sales order item to the database."""
         self.id = self.database_connection.save_sales_order_item(self)

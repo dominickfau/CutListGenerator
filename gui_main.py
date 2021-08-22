@@ -300,9 +300,15 @@ class Application(QtWidgets.QMainWindow):
 
         for row_index, row in enumerate(table_data):
             is_child_item = row.pop('is_child_item')
-            qty_left_to_cut = int(SalesOrderItem.from_id(self.cut_list_generator_database, row['Id']).qty_left_to_cut)
+            sales_order_item = SalesOrderItem.from_id(self.cut_list_generator_database, row['Id'])
+            qty_left_to_cut = int(sales_order_item.qty_left_to_cut)
+            qty_scheduled_to_cut = int(sales_order_item.qty_scheduled_to_cut)
+
             column_index = self.headers['Qty Left To Cut']['index']
             self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(qty_left_to_cut)))
+
+            column_index = self.headers['Qty Scheduled To Cut']['index']
+            self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(qty_scheduled_to_cut)))
 
             for key in row:
                 # Id, Due Date, Customer Name, SO Number, Product Number, Description, Qty Left To Ship, Line Number, Fully Cut, Parent Number, Parent Description
