@@ -178,7 +178,7 @@
     <property name="title">
      <string>Cut Job</string>
     </property>
-    <addaction name="action_cut_job_Create_New"/>
+    <addaction name="action_cut_job_Create_Blank"/>
     <addaction name="action_cut_job_Show_All_Open"/>
    </widget>
    <addaction name="menuFile"/>
@@ -206,9 +206,9 @@
     <string>Get Sales Order Data</string>
    </property>
   </action>
-  <action name="action_cut_job_Create_New">
+  <action name="action_cut_job_Create_Blank">
    <property name="text">
-    <string>Create New</string>
+    <string>Create Blank Job</string>
    </property>
   </action>
   <action name="action_cut_job_Show_All_Open">

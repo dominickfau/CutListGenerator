@@ -92,7 +92,7 @@ class Application(QtWidgets.QMainWindow):
 
         # Menubar
         self.ui.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
-        self.ui.action_cut_job_Create_New.triggered.connect(lambda: self.load_cut_job_data())
+        self.ui.action_cut_job_Create_Blank.triggered.connect(lambda: self.create_cut_job())
         self.ui.action_cut_job_Show_All_Open.triggered.connect(lambda: self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database,parent=self))
 
         # Push buttons
