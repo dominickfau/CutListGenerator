@@ -185,6 +185,7 @@
     <addaction name="actionSettings"/>
     <addaction name="actionSystem_Properties"/>
     <addaction name="actionHelp"/>
+    <addaction name="actionAbout"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuFishbowl_2">
@@ -208,12 +209,13 @@
      <property name="title">
       <string>Export</string>
      </property>
-     <addaction name="actionCut_Jobs_List"/>
-     <addaction name="actionTermination_Job_List"/>
-     <addaction name="actionSplice_Jobs_List"/>
-     <addaction name="actionProduct_List"/>
-     <addaction name="actionWire_Cutter_List"/>
-     <addaction name="actionWire_Cutter_Options_List"/>
+     <addaction name="actionExport_Cut_Job_Summary"/>
+     <addaction name="actionExport_Cut_Jobs_List"/>
+     <addaction name="actionExport_Termination_Job_List"/>
+     <addaction name="actionExport_Splice_Jobs_List"/>
+     <addaction name="actionExport_Product_List"/>
+     <addaction name="actionExport_Wire_Cutter_List"/>
+     <addaction name="actionExport_Wire_Cutter_Options_List"/>
     </widget>
     <addaction name="menuExport"/>
    </widget>
@@ -345,7 +347,7 @@
     <string>Termination Jobs</string>
    </property>
   </action>
-  <action name="actionCut_Jobs_List">
+  <action name="actionExport_Cut_Jobs_List">
    <property name="text">
     <string>Cut Jobs List</string>
    </property>
@@ -356,7 +358,7 @@
     <string>Exports all cut jobs awaiting to be cut.</string>
    </property>
   </action>
-  <action name="actionTermination_Job_List">
+  <action name="actionExport_Termination_Job_List">
    <property name="text">
     <string>Termination Job List</string>
    </property>
@@ -367,7 +369,7 @@
     <string>Exports all cut jobs that are awaiting to be terminated.</string>
    </property>
   </action>
-  <action name="actionSplice_Jobs_List">
+  <action name="actionExport_Splice_Jobs_List">
    <property name="text">
     <string>Splice Jobs List</string>
    </property>
@@ -378,7 +380,7 @@
     <string>Exports all cut jobs awaiting to be spliced.</string>
    </property>
   </action>
-  <action name="actionProduct_List">
+  <action name="actionExport_Product_List">
    <property name="text">
     <string>Product List</string>
    </property>
@@ -389,7 +391,7 @@
     <string>Export all products.</string>
    </property>
   </action>
-  <action name="actionWire_Cutter_List">
+  <action name="actionExport_Wire_Cutter_List">
    <property name="text">
     <string>Wire Cutter List</string>
    </property>
@@ -400,7 +402,7 @@
     <string>Exports all wire cutters along with any assigned options.</string>
    </property>
   </action>
-  <action name="actionWire_Cutter_Options_List">
+  <action name="actionExport_Wire_Cutter_Options_List">
    <property name="text">
     <string>Wire Cutter Options List</string>
    </property>
@@ -414,6 +416,22 @@
   <action name="actionWire_Cutter">
    <property name="text">
     <string>Wire Cutter</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="actionExport_Cut_Job_Summary">
+   <property name="text">
+    <string>Cut Job Summary</string>
+   </property>
+   <property name="toolTip">
+    <string>Exports a summary of all unfinished cut jobs.</string>
+   </property>
+   <property name="statusTip">
+    <string>Exports a summary of all unfinished cut jobs.</string>
    </property>
   </action>
  </widget>
@@ -448,6 +466,22 @@
     <hint type="destinationlabel">
      <x>210</x>
      <y>280</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExit</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>578</x>
+     <y>418</y>
     </hint>
    </hints>
   </connection>

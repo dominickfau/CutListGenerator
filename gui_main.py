@@ -91,9 +91,30 @@ class Application(QtWidgets.QMainWindow):
         self.progressBar.hide()
 
         # Menubar
+
+        # File
+        # TODO: Add file menu functions.
+        # self.ui.actionSettings.triggered.connect(self.show_settings_dialog)
+        # self.ui.actionSystem_Properties.triggered.connect(self.show_system_properties_dialog)
+        # self.ui.actionHelp.triggered.connect(self.show_help_dialog)
+        # self.ui.actionAbout.triggered.connect(self.show_about_dialog)
+
+        # Fishbowl
         self.ui.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
+
+        # Cut Job
         self.ui.action_cut_job_Create_Blank.triggered.connect(lambda: self.create_cut_job())
         self.ui.action_cut_job_Show_All_Open.triggered.connect(lambda: self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database,parent=self))
+
+        # Reports - Export
+        # TODO: Add export report functionality
+        # self.ui.actionExport_Cut_Job_Summary.triggered.connect(self.export_cut_job_summary)
+        # self.ui.actionExport_Cut_Jobs_List.triggered.connect(self.export_cut_jobs_list)
+        # self.ui.actionExport_Termination_Job_List.triggered.connect(self.export_termination_jobs_list)
+        # self.ui.actionExport_Splice_Jobs_List.triggered.connect(self.export_splice_jobs_list)
+        # self.ui.actionExport_Product_List.triggered.connect(self.export_product_list)
+        # self.ui.actionExport_Wire_Cutter_List.triggered.connect(self.export_wire_cutter_list)
+        # self.ui.actionExport_Wire_Cutter_Options_List.triggered.connect(self.export_wire_cutter_options_list)
 
         # Push buttons
         self.ui.so_search_push_button.clicked.connect(self.load_so_table_data)
