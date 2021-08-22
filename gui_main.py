@@ -93,7 +93,7 @@ class Application(QtWidgets.QMainWindow):
         # Menubar
         self.ui.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
         self.ui.action_cut_job_Create_New.triggered.connect(lambda: self.load_cut_job_data())
-        self.ui.action_cut_job_Show_All_Open.triggered.connect(self.open_cut_job_search_dialog)
+        self.ui.action_cut_job_Show_All_Open.triggered.connect(lambda: self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database,parent=self))
 
         # Push buttons
         self.ui.so_search_push_button.clicked.connect(self.load_so_table_data)
@@ -132,11 +132,6 @@ class Application(QtWidgets.QMainWindow):
                 width = len(header.text()) * 10
                 headers[header.text()] = {'index': index, 'width': width}
         return headers
-
-    def open_cut_job_search_dialog(self):
-        dialog = CutJobSearchDialog(self.cut_list_generator_database, parent=self)
-        if dialog.exec():
-            pass
 
     def get_so_search_data(self):
         include_finished = self.ui.so_search_include_finished_check_box.isChecked()
@@ -180,7 +175,7 @@ class Application(QtWidgets.QMainWindow):
         if len(cut_jobs) == 0:
             self.load_cut_job_data()
         else:
-            self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database, product=product, sales_order_item=sales_order_item)
+            self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database, product=product, sales_order_item=sales_order_item, parent=self)
 
     def on_so_table_row_double_clicked(self, row):
         row_num = row.row()
@@ -193,11 +188,10 @@ class Application(QtWidgets.QMainWindow):
         else:
             self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database, product=product, sales_order_item=sales_order_item)
         
-    
     def show_cut_job_search_dialog(self, **kwargs):
         dialog = CutJobSearchDialog(**kwargs)
         # dialog.rejected.connect(lambda: self.load_cut_job_data())
-        dialog.accepted.connect(lambda: self.load_cut_job_data(dialog.cut_job))
+        dialog.accepted.connect(lambda: self.load_cut_job(dialog.cut_job))
         dialog.exec()
 
     def get_row_data_from_so_table(self, row_num: int) -> dict:
