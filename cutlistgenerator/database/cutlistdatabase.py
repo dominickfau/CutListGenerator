@@ -180,8 +180,8 @@ class CutListDatabase(Database):
         pass
     
     @abstractmethod
-    def get_cut_job_by_so_item_id(self, so_item_id: int) -> List[dict]:
-        """Get cut job by cut job id. Returns None if not found."""
+    def get_cut_jobs_by_so_item_id(self, so_item_id: int) -> List[dict]:
+        """Get all cut jobs for a sales order item. Returns empty list if not found."""
         pass
 
     @abstractmethod

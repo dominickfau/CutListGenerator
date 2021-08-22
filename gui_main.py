@@ -81,6 +81,7 @@ class Application(QtWidgets.QMainWindow):
 
         self.threadpool = QThreadPool()
         self.progressBar = QProgressBar()
+        self.headers = self._get_table_headers(self.ui.sales_order_table_widget)
 
         self.ui.statusbar.addPermanentWidget(self.progressBar)
 
@@ -120,6 +121,17 @@ class Application(QtWidgets.QMainWindow):
             self.thread_get_current_fb_data()
         
         self.load_so_table_data()
+    
+    def _get_table_headers(self, table_widget) -> dict:
+        # TODO: Move this to a utility function.
+        """Returns a dict of the headers for the given table widget."""
+        headers = {}
+        for index in range(table_widget.columnCount()):
+            header = table_widget.horizontalHeaderItem(index)
+            if header is not None:
+                width = len(header.text()) * 10
+                headers[header.text()] = {'index': index, 'width': width}
+        return headers
 
     def open_cut_job_search_dialog(self):
         dialog = CutJobSearchDialog(self.cut_list_generator_database, parent=self)
@@ -189,9 +201,9 @@ class Application(QtWidgets.QMainWindow):
         dialog.exec()
 
     def get_row_data_from_so_table(self, row_num: int) -> dict:
-        so_item_id = int(self.ui.sales_order_table_widget.item(row_num, 0).text())
-        so_number = self.ui.sales_order_table_widget.item(row_num, 3).text()
-        product_number = self.ui.sales_order_table_widget.item(row_num, 4).text()
+        so_item_id = int(self.ui.sales_order_table_widget.item(row_num, self.headers['Id']['index']).text())
+        so_number = self.ui.sales_order_table_widget.item(row_num, self.headers['SO Number']['index']).text()
+        product_number = self.ui.sales_order_table_widget.item(row_num, self.headers['Product Number']['index']).text()
         return {
             'so_item_id': so_item_id,
             'so_number': so_number,
@@ -238,7 +250,7 @@ class Application(QtWidgets.QMainWindow):
             if dialog.cut_job.is_cut and dialog.cut_job.related_sales_order_item:
                 logger.info(f"[CUT JOB] Checking if sales order item ID {dialog.cut_job.related_sales_order_item.id} is fully cut.")
                 sales_order_item = dialog.cut_job.related_sales_order_item
-                if sales_order_item.is_fully_cut:
+                if sales_order_item.cut_in_full:
                     logger.info(f"Sales order item ID {sales_order_item.id} is fully cut.")
                     sales_order_item.save()
                 else:
@@ -260,8 +272,19 @@ class Application(QtWidgets.QMainWindow):
         self.load_so_table_data()
 
     def clear_table(self, tableWidget):
+        # TODO: Move this to a utility function.
         logger.debug("[TABLE] Clearing table.")
         tableWidget.setRowCount(0)
+    
+    def get_max_width_for_column(self, data: dict, column_key: str) -> int:
+        """Returns the maximum width for a given column."""
+        # TODO: Move this to a utility function.
+        max_width = 0
+        for row in data:
+            value = str(row[column_key])
+            if len(value) > max_width:
+                max_width = len(value)
+        return max_width
 
     def load_so_table_data(self):
         logger.debug("[SEARCH] Loading SO data into table.")
@@ -276,14 +299,24 @@ class Application(QtWidgets.QMainWindow):
         logger.debug(f"[SEARCH] Found {len(table_data)} rows of data.")
 
         for row_index, row in enumerate(table_data):
-            for column_index, key in enumerate(row):
-                self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(row[key])))
-                if key == "due_date":
-                    self.ui.sales_order_table_widget.setColumnWidth(column_index, 100)
-                elif key == "customer_name":
-                    self.ui.sales_order_table_widget.setColumnWidth(column_index, 200)
-                elif key == "product_description":
-                    self.ui.sales_order_table_widget.setColumnWidth(column_index, 250)
+            is_child_item = row.pop('is_child_item')
+            qty_left_to_cut = int(SalesOrderItem.from_id(self.cut_list_generator_database, row['Id']).qty_left_to_cut)
+            column_index = self.headers['Qty Left To Cut']['index']
+            self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(qty_left_to_cut)))
+
+            for key in row:
+                # Id, Due Date, Customer Name, SO Number, Product Number, Description, Qty Left To Ship, Line Number, Fully Cut, Parent Number, Parent Description
+                value = row[key]
+                if value == None:
+                    value = ''
+                if key == 'Qty Left To Ship':
+                    value = int(value)
+                column_index = self.headers[key]['index']
+                # width = self.get_max_width_for_column(table_data, key) * 2
+                width = self.headers[key]['width']
+                self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(value)))
+                self.ui.sales_order_table_widget.setColumnWidth(column_index, width)
+
 
     def update_progess_bar(self, value):
         self.progressBar.setValue(value)

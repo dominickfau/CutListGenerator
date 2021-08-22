@@ -607,7 +607,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             cut_jobs.append(cut_job)
         return cut_jobs
     
-    def get_cut_job_by_so_item_id(self, so_item_id: int) -> List[dict]:
+    def get_cut_jobs_by_so_item_id(self, so_item_id: int) -> List[dict]:
         values = {
             'so_item_id': so_item_id
         }
@@ -792,41 +792,49 @@ class MySQLDatabaseConnection(CutListDatabase):
             }
 
         if search_data['cut_in_full'] != '%':
-            cursor.execute("""SELECT sales_order_item.id AS so_item_id,
-                                DATE_FORMAT(sales_order_item.due_date, "%c-%e-%Y") AS due_date,
-                                sales_order.customer_name AS customer_name,
-                                sales_order.number AS so_number,
-                                product.number AS product_number,
-                                product.description AS product_description,
-                                -- product.unit_price_dollars AS unit_price,
-                                TRIM((sales_order_item.qty_to_fulfill - sales_order_item.qty_fulfilled - sales_order_item.qty_picked))+0 AS qty_left_to_ship,
-                                -- product.uom AS uom,
-                                sales_order_item.line_number AS line_number,
+            cursor.execute("""SELECT sales_order_item.id AS "Id",
+                                DATE_FORMAT(sales_order_item.due_date, "%c-%e-%Y") AS "Due Date",
+                                sales_order.customer_name AS "Customer Name",
+                                sales_order.number AS "SO Number",
+                                product.number AS "Product Number",
+                                product.description AS "Description",
+                                -- product.unit_price_dollars AS "Unit Price",
+                                TRIM((sales_order_item.qty_to_fulfill - sales_order_item.qty_fulfilled - sales_order_item.qty_picked))+0 AS "Qty Left To Ship",
+                                -- product.uom AS "UOM",
+                                sales_order_item.line_number AS "Line Number",
                                 product.kit_flag AS is_child_item,
-                                sales_order_item.cut_in_full AS cut_in_full
+                                sales_order_item.cut_in_full AS "Fully Cut",
+                                parent_product.number AS "Parent Number",
+                                parent_product.description AS "Parent Description"
                             FROM sales_order
                             JOIN sales_order_item ON sales_order_item.sales_order_id = sales_order.id
                             JOIN product ON sales_order_item.product_id = product.id
+                            LEFT JOIN parent_to_child_product ON parent_to_child_product.child_product_id = product.id
+                            LEFT JOIN product parent_product ON parent_to_child_product.parent_product_id = parent_product.id
                             WHERE sales_order_item.cut_in_full = 0
                             AND product.number LIKE%(product_number)s
                             AND sales_order.number LIKE%(so_number)s
                             ORDER BY product.number, sales_order_item.due_date""", search_data)
         else:
-            cursor.execute("""SELECT sales_order_item.id AS so_item_id,
-                                DATE_FORMAT(sales_order_item.due_date, "%c-%e-%Y") AS due_date,
-                                sales_order.customer_name AS customer_name,
-                                sales_order.number AS so_number,
-                                product.number AS product_number,
-                                product.description AS product_description,
-                                -- product.unit_price_dollars AS unit_price,
-                                TRIM((sales_order_item.qty_to_fulfill - sales_order_item.qty_fulfilled - sales_order_item.qty_picked))+0 AS qty_left_to_ship,
-                                -- product.uom AS uom,
-                                sales_order_item.line_number AS line_number,
+            cursor.execute("""SELECT sales_order_item.id AS "Id",
+                                DATE_FORMAT(sales_order_item.due_date, "%c-%e-%Y") AS "Due Date",
+                                sales_order.customer_name AS "Customer Name",
+                                sales_order.number AS "SO Number",
+                                product.number AS "Product Number",
+                                product.description AS "Description",
+                                -- product.unit_price_dollars AS "Unit Price",
+                                TRIM((sales_order_item.qty_to_fulfill - sales_order_item.qty_fulfilled - sales_order_item.qty_picked))+0 AS "Qty Left To Ship",
+                                -- product.uom AS "UOM",
+                                sales_order_item.line_number AS "Line Number",
                                 product.kit_flag AS is_child_item,
-                                sales_order_item.cut_in_full AS cut_in_full
+                                sales_order_item.cut_in_full AS "Fully Cut",
+                                parent_product.number AS "Parent Number",
+                                parent_product.description AS "Parent Description"
                             FROM sales_order
                             JOIN sales_order_item ON sales_order_item.sales_order_id = sales_order.id
                             JOIN product ON sales_order_item.product_id = product.id
+                            LEFT JOIN parent_to_child_product ON parent_to_child_product.child_product_id = product.id
+                            LEFT JOIN product parent_product ON parent_to_child_product.parent_product_id = parent_product.id
                             WHERE product.number LIKE%(product_number)s
                             AND sales_order.number LIKE%(so_number)s
                             ORDER BY product.number, sales_order_item.due_date""", search_data)

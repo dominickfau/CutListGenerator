@@ -54,7 +54,7 @@ class CutJob:
     def from_sales_order_item_id(cls, database_connection: CutListDatabase, sales_order_item_id: int) -> List['CutJob']:
         """Returns all cut jobs from the database for the given sales order item id. Returns empty list if no cut job was found."""
         cut_jobs = []
-        data = database_connection.get_cut_job_by_so_item_id(sales_order_item_id)
+        data = database_connection.get_cut_jobs_by_so_item_id(sales_order_item_id)
         if not data:
             return []
         for item in data:

@@ -17,7 +17,6 @@ class SalesOrderItem:
     line_number: int
     id: int = None
     sales_order_id: int = None
-    cut_in_full: bool = False
     date_added: datetime.datetime = None
     
     @classmethod
@@ -31,6 +30,7 @@ class SalesOrderItem:
         """Returns a sales order item from the database by its ID. Returns None if not found."""
 
         data = database_connection.get_sales_order_item_by_id(sales_order_item_id)
+        _ = data.pop("cut_in_full", None)
         if not data:
             return None
         product = Product.from_id(database_connection, data['product_id'])
@@ -46,6 +46,7 @@ class SalesOrderItem:
 
         items = database_connection.get_sales_order_items_by_sales_order_id(sales_order_id)
         for item in items:
+            _ = item.pop("cut_in_full", None)
             to_return.append(cls(database_connection, **item))
         
         return to_return
@@ -57,22 +58,33 @@ class SalesOrderItem:
         return self.qty_to_fulfill - self.qty_picked - self.qty_fulfilled
     
     @property
-    def is_fully_cut(self) -> bool:
+    def cut_in_full(self) -> bool:
         """Returns true if the item is fully cut."""
         # TODO: Check that this works as intended.
         cut_jobs = []
-        data = self.database_connection.get_cut_job_by_so_item_id(self.id)
+        data = self.database_connection.get_cut_jobs_by_so_item_id(self.id)
         total_qty_cut = 0
         for cut_job in data:
             if not cut_job['is_cut']:
                 continue
             total_qty_cut += cut_job['quantity_cut']
-        self.cut_in_full = total_qty_cut >= self.quantity_left_to_ship
-        return self.cut_in_full
+        return total_qty_cut >= self.quantity_left_to_ship
+    
+    @property
+    def qty_left_to_cut(self) -> float:
+        """Returns total quantity left to cut."""
+        # TODO: Check that this works as intended.
+        cut_jobs = []
+        data = self.database_connection.get_cut_jobs_by_so_item_id(self.id)
+        total_qty_cut = 0
+        for cut_job in data:
+            if not cut_job['is_cut']:
+                continue
+            total_qty_cut += cut_job['quantity_cut']
+        return self.quantity_left_to_ship - total_qty_cut
     
     def save(self):
         """Saves the sales order item to the database."""
-        x = self.is_fully_cut
         self.id = self.database_connection.save_sales_order_item(self)
     
     def delete(self):
@@ -111,6 +123,7 @@ class SalesOrder:
 
             # Remove unneeded data
             del sales_order_item_data['product_id']
+            del sales_order_item_data['cut_in_full']
 
             sales_order_item = SalesOrderItem(database_connection, product, **sales_order_item_data)
             sales_order.add_item(sales_order_item)
