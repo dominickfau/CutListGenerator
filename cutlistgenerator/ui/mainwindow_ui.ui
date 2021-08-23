@@ -219,10 +219,26 @@
     </widget>
     <addaction name="menuExport"/>
    </widget>
+   <widget class="QMenu" name="menuWire_Cutter">
+    <property name="title">
+     <string>Wire Cutter</string>
+    </property>
+    <widget class="QMenu" name="menuOptions">
+     <property name="title">
+      <string>Options</string>
+     </property>
+     <addaction name="actionWire_Cutter_Option_Create"/>
+     <addaction name="actionWire_Cutter_Option_Edit"/>
+    </widget>
+    <addaction name="actionWire_Cutter_New"/>
+    <addaction name="actionWire_Cutter_Edit"/>
+    <addaction name="menuOptions"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuFishbowl_2"/>
    <addaction name="menuCut_Job"/>
    <addaction name="menuReports"/>
+   <addaction name="menuWire_Cutter"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionGet_Current_SO_Data_From_Fishbowl">
@@ -432,6 +448,58 @@
    </property>
    <property name="statusTip">
     <string>Exports a summary of all unfinished cut jobs.</string>
+   </property>
+  </action>
+  <action name="actionWire_Cutter_New">
+   <property name="text">
+    <string>New</string>
+   </property>
+   <property name="iconText">
+    <string>New</string>
+   </property>
+   <property name="toolTip">
+    <string>Create a new wire cutter.</string>
+   </property>
+   <property name="statusTip">
+    <string>Create a new wire cutter.</string>
+   </property>
+  </action>
+  <action name="actionWire_Cutter_Edit">
+   <property name="text">
+    <string>Edit</string>
+   </property>
+   <property name="toolTip">
+    <string>Find and edit a wire cutter.</string>
+   </property>
+   <property name="statusTip">
+    <string>Find and edit a wire cutter.</string>
+   </property>
+  </action>
+  <action name="actionWire_Cutter_Option_Create">
+   <property name="text">
+    <string>Create</string>
+   </property>
+   <property name="toolTip">
+    <string>Create a new wire cutter option.</string>
+   </property>
+   <property name="statusTip">
+    <string>Create a new wire cutter option.</string>
+   </property>
+  </action>
+  <action name="actionWire_Cutter_Option_Edit">
+   <property name="text">
+    <string>Edit</string>
+   </property>
+   <property name="toolTip">
+    <string>Find and edit a wire cutter option.</string>
+   </property>
+   <property name="statusTip">
+    <string>Find and edit a wire cutter option.</string>
+   </property>
+  </action>
+  <action name="actionWire_Cutter_Option">
+   <property name="text">
+    <string>Add To Cutter</string>
    </property>
   </action>
  </widget>

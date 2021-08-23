@@ -10,7 +10,7 @@ class WireCutterDialog(Ui_wire_cutter_dialog, QDialog):
                  cut_list_generator_database: CutListDatabase,
                  wire_cutter: WireCutter = None,
                  parent=None):
-        super(WireCutterDialog, self).__init__(parent)
+        super(Ui_wire_cutter_dialog, self).__init__(parent)
         self.setupUi(self)
         self.cut_list_generator_database = cut_list_generator_database
         self.wire_cutter = wire_cutter

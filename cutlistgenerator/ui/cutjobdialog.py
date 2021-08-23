@@ -12,6 +12,7 @@ from cutlistgenerator.appdataclasses.wirecutter import WireCutter
 from cutlistgenerator.appdataclasses.cutjob import CutJob
 from cutlistgenerator.appdataclasses.salesorder import SalesOrder, SalesOrderItem
 from cutlistgenerator.logging import FileLogger
+from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 
 
 logger = FileLogger(__name__)
@@ -21,14 +22,15 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
                  cut_list_generator_database: CutListDatabase,
                  fishbowl_database: FishbowlDatabaseConnection,
                  product: Product = None,
-                 linked_so_item_id: int = None,
+                 linked_so_item: SalesOrderItem = None,
                  cut_job: CutJob = None,
                  parent=None):
         super(Ui_cut_job_dialog, self).__init__(parent)
         self.setupUi(self)
+        self.date_formate = SystemProperty.find_by_name(database_connection=cut_list_generator_database, name="date_formate").value
 
         # BUG: Fix this.
-        # if cut_job is None or not (product is None and linked_so_item_id is None):
+        # if cut_job is None or not (product is None and linked_so_item is None):
         #     # TODO: Create a better Exception.
         #     raise ValueError("Either a cut job or a product and a linked sales order item must be provided.")
 
@@ -47,13 +49,22 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
         # Populate combo boxes
         self._populate_product_number_combo_box()
         self._populate_wire_cutter_combo_box()
+
+        # Initial set datetime to current datetime.
+        current_date_time = QDateTime.fromString(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
+        self.cut_start_date_time_edit.setDateTime(current_date_time)
+        self.cut_end_date_time_edit.setDateTime(current_date_time)
+        self.termination_start_date_time_edit.setDateTime(current_date_time)
+        self.termination_end_date_time_edit.setDateTime(current_date_time)
+        self.splice_start_date_time_edit.setDateTime(current_date_time)
+        self.splice_end_date_time_edit.setDateTime(current_date_time)
         
         if product:
             self.add_product(product)
             self.product_number_combo_box.setCurrentText(product.number)
 
-        if linked_so_item_id:
-            self.link_sales_order_item(linked_so_item_id)
+        if linked_so_item:
+            self.link_sales_order_item(linked_so_item)
         
         if self.cut_job:
             self.load_cut_job(self.cut_job)
@@ -65,20 +76,12 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
         self.find_so_item_push_button.clicked.connect(self.on_find_so_item_clicked)
         self.remove_linked_so_item_push_button.clicked.connect(self.on_remove_linked_so_item_clicked)
 
-        # Initial set datetime to current datetime.
-        current_date_time = QDateTime.fromString(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
-        self.cut_start_date_time_edit.setDateTime(current_date_time)
-        self.cut_end_date_time_edit.setDateTime(current_date_time)
-        self.termination_start_date_time_edit.setDateTime(current_date_time)
-        self.termination_end_date_time_edit.setDateTime(current_date_time)
-        self.splice_start_date_time_edit.setDateTime(current_date_time)
-        self.splice_end_date_time_edit.setDateTime(current_date_time)
 
     def load_cut_job(self, cut_job: CutJob):
         """Loads a cut job into the dialog."""
         self.unlink_sales_order_item()
         if cut_job.related_sales_order_item:
-            self.link_sales_order_item(cut_job.related_sales_order_item.id)
+            self.link_sales_order_item(cut_job.related_sales_order_item)
 
         self.product_number_combo_box.setCurrentText(cut_job.product.number)
         self.wire_cutter_name_combo_box.setCurrentText(cut_job.assigned_wire_cutter.name)
@@ -117,12 +120,12 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
                 date_time = QDateTime.fromString(cut_job.date_splice_end.strftime("%Y-%m-%d %H:%M:%S"), "yyyy-MM-dd hh:mm:ss")
                 self.splice_end_date_time_edit.setDateTime(date_time)
 
-    def link_sales_order_item(self, so_item_id: int):
+    def link_sales_order_item(self, sales_order_item: SalesOrderItem) -> None:
         """Links a sales order item to the cut job. Takes a sales order item id."""
-        logger.debug(f"Attempting to link sales order item id {so_item_id} to cut job.")
+        logger.debug(f"Attempting to link sales order item id {sales_order_item} to cut job.")
 
-        self.linked_so_item = SalesOrderItem.from_id(self.cut_list_generator_database, so_item_id)
-        self.sales_order = SalesOrder.from_sales_order_item_id(self.cut_list_generator_database, so_item_id)
+        self.linked_so_item = sales_order_item
+        self.sales_order = SalesOrder.from_sales_order_item_id(self.cut_list_generator_database, sales_order_item.id)
 
         self.linked_sales_order_number_value_label.setText(self.sales_order.number)
         self.linked_sales_order_product_number_value_label.setText(self.linked_so_item.product.number)

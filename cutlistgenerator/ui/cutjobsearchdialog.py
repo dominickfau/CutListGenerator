@@ -8,6 +8,8 @@ from cutlistgenerator.appdataclasses.product import Product
 from cutlistgenerator.appdataclasses.wirecutter import WireCutter
 from cutlistgenerator.appdataclasses.salesorder import SalesOrder, SalesOrderItem
 from cutlistgenerator.logging import FileLogger
+from cutlistgenerator import utilities
+from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 
 
 logger = FileLogger(__name__)
@@ -32,6 +34,8 @@ class CutJobSearchDialog(Ui_cut_job_search_dialog, QDialog):
         self._valid_wire_cutters = []
         self._valid_product_numbers = []
         self._valid_wire_cutter_names = []
+        self.headers = utilities.get_table_headers(self.cut_job_table_widget)
+        self.date_formate = SystemProperty.find_by_name(database_connection=cut_list_generator_database, name="date_formate").value
 
         # Populate combo boxes
         self._populate_product_number_combo_box()
@@ -119,20 +123,90 @@ class CutJobSearchDialog(Ui_cut_job_search_dialog, QDialog):
             if search_data["sales_order_number"] != None and search_data["sales_order_number"] != so_number_value:
                 continue
 
-            self.cut_job_table_widget.setItem(row, 0, QTableWidgetItem(str(cut_job.id)))
-            self.cut_job_table_widget.setColumnWidth(0, 50)
-            self.cut_job_table_widget.setItem(row, 1, QTableWidgetItem(str(cut_job.date_created.date())))
-            self.cut_job_table_widget.setItem(row, 2, QTableWidgetItem(str(cut_job.product.number)))
-            self.cut_job_table_widget.setItem(row, 3, QTableWidgetItem(so_number))
-            self.cut_job_table_widget.setItem(row, 4, QTableWidgetItem(str(cut_job.assigned_wire_cutter.name)))
-            self.cut_job_table_widget.setItem(row, 5, QTableWidgetItem(str(int(cut_job.quantity_cut))))
-            self.cut_job_table_widget.setItem(row, 6, QTableWidgetItem(str(cut_job.date_cut_start)))
-            self.cut_job_table_widget.setItem(row, 7, QTableWidgetItem(str(cut_job.date_cut_end)))
-            self.cut_job_table_widget.setItem(row, 8, QTableWidgetItem(str(cut_job.date_termination_start)))
-            self.cut_job_table_widget.setItem(row, 9, QTableWidgetItem(str(cut_job.date_termination_end)))
-            self.cut_job_table_widget.setItem(row, 10, QTableWidgetItem(str(cut_job.date_splice_start)))
-            self.cut_job_table_widget.setItem(row, 11, QTableWidgetItem(str(cut_job.date_splice_end)))
-            self.cut_job_table_widget.setItem(row, 12, QTableWidgetItem(str(cut_job.is_ready_for_build_as_string)))
+            column_index = self.headers['Id']['index']
+            width = self.headers['Id']['width']
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(str(cut_job.id)))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers['Date Created']['index']
+            width = self.headers['Date Created']['width']
+            value = cut_job.date_created.strftime(self.date_formate)
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(value))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers['Product Number']['index']
+            width = self.headers['Product Number']['width']
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(str(cut_job.product.number)))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers['SO Number']['index']
+            width = self.headers['SO Number']['width']
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(so_number))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers['Assigned Cutter']['index']
+            width = self.headers['Assigned Cutter']['width']
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(str(cut_job.assigned_wire_cutter.name)))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers['Quantity Cut']['index']
+            width = self.headers['Quantity Cut']['width']
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(str(int(cut_job.quantity_cut))))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers['Cut Start Date']['index']
+            width = self.headers['Cut Start Date']['width']
+            value = ""
+            if cut_job.date_cut_start:
+                value = cut_job.date_cut_start.strftime(self.date_formate)
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(value))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers["Cut End Date"]['index']
+            width = self.headers["Cut End Date"]['width']
+            value = ""
+            if cut_job.date_cut_end:
+                value = cut_job.date_cut_end.strftime(self.date_formate)
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(value))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers['Term Start Date']['index']
+            width = self.headers['Term Start Date']['width']
+            value = ""
+            if cut_job.date_termination_start:
+                value = cut_job.date_termination_start.strftime(self.date_formate)
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(value))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers['Term End Date']['index']
+            width = self.headers['Term End Date']['width']
+            value = ""
+            if cut_job.date_termination_end:
+                value = cut_job.date_termination_end.strftime(self.date_formate)
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(value))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers['Splice Start Date']['index']
+            width = self.headers['Splice Start Date']['width']
+            value = ""
+            if cut_job.date_splice_start:
+                value = cut_job.date_splice_start.strftime(self.date_formate)
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(value))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers['Splice End Date']['index']
+            width = self.headers['Splice End Date']['width']
+            value = ""
+            if cut_job.date_splice_end:
+                value = cut_job.date_splice_end.strftime(self.date_formate)
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(value))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
+            column_index = self.headers['Ready For Build']['index']
+            width = self.headers['Ready For Build']['width']
+            self.cut_job_table_widget.setItem(row, column_index, QTableWidgetItem(str(cut_job.is_ready_for_build_as_string)))
+            self.cut_job_table_widget.setColumnWidth(column_index, width)
+
             row += 1
         
         # This removes any blank rows at the end of the table.

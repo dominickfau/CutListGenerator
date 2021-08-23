@@ -13,6 +13,8 @@ import cutlistgenerator
 from cutlistgenerator.ui.mainwindow_ui import Ui_MainWindow
 from cutlistgenerator.ui.cutjobdialog import CutJobDialog
 from cutlistgenerator.ui.cutjobsearchdialog import CutJobSearchDialog
+from cutlistgenerator.ui.wirecutterdialog import WireCutterDialog
+from cutlistgenerator.ui.wirecuttersearchdialog import WireCutterSearchDialog
 
 
 from cutlistgenerator.ui.customwidgets.resizablemessagebox import ResizableMessageBox
@@ -81,7 +83,7 @@ class Application(QtWidgets.QMainWindow):
 
         self.threadpool = QThreadPool()
         self.progressBar = QProgressBar()
-        self.headers = self._get_table_headers(self.ui.sales_order_table_widget)
+        self.headers = utilities.get_table_headers(self.ui.sales_order_table_widget)
 
         self.ui.statusbar.addPermanentWidget(self.progressBar)
 
@@ -116,6 +118,14 @@ class Application(QtWidgets.QMainWindow):
         # self.ui.actionExport_Wire_Cutter_List.triggered.connect(self.export_wire_cutter_list)
         # self.ui.actionExport_Wire_Cutter_Options_List.triggered.connect(self.export_wire_cutter_options_list)
 
+        # Wire Cutter
+        self.ui.actionWire_Cutter_New.triggered.connect(lambda: self.show_wire_cutter_dialog(cut_list_generator_database=self.cut_list_generator_database,
+                                                                                             parent=self))
+        self.ui.actionWire_Cutter_Edit.triggered.connect(lambda: self.show_wire_cutter_dialog(cut_list_generator_database=self.cut_list_generator_database,
+                                                                                                parent=self,
+                                                                                                wire_cutter=self.show_wire_cutter_search_dialog(cut_list_generator_database=self.cut_list_generator_database,
+                                                                                                     parent=self)))
+
         # Push buttons
         self.ui.so_search_push_button.clicked.connect(self.load_so_table_data)
         self.ui.so_view_push_button.clicked.connect(self.on_view_button_clicked)
@@ -127,6 +137,9 @@ class Application(QtWidgets.QMainWindow):
 
         self.fishbowl_database = FishbowlDatabaseConnection(connection_args=cutlistgenerator.program_settings.get_fishbowl_settings()['auth'])
         self.cut_list_generator_database = MySQLDatabaseConnection(connection_args=cutlistgenerator.program_settings.get_cutlist_settings()['auth'])
+
+        # This is to make sure all system properties exist.
+        utilities.create_default_system_properties(self.cut_list_generator_database)
 
         if not cutlistgenerator.program_settings.is_database_setup():
             logger.info("[DATABASE] Setting up database.")
@@ -141,18 +154,8 @@ class Application(QtWidgets.QMainWindow):
             logger.info("[AUTO UPDATE] Auto updating sales order data from Fishbowl.")
             self.thread_get_current_fb_data()
         
+        self.date_formate = SystemProperty.find_by_name(database_connection=self.cut_list_generator_database, name="date_formate").value
         self.load_so_table_data()
-    
-    def _get_table_headers(self, table_widget) -> dict:
-        # TODO: Move this to a utility function.
-        """Returns a dict of the headers for the given table widget."""
-        headers = {}
-        for index in range(table_widget.columnCount()):
-            header = table_widget.horizontalHeaderItem(index)
-            if header is not None:
-                width = len(header.text()) * 10
-                headers[header.text()] = {'index': index, 'width': width}
-        return headers
 
     def get_so_search_data(self):
         include_finished = self.ui.so_search_include_finished_check_box.isChecked()
@@ -174,7 +177,7 @@ class Application(QtWidgets.QMainWindow):
         else:
             so_number = f"%{so_number}%"
         
-        logger.debug(f"[SEARCH] Current search parameters. Product Number: '{product_number}' SO Number: '{so_number}'' Show Finished: '{include_finished}'")
+        logger.debug(f"[SEARCH] Current search parameters. Product Number: '{product_number}' SO Number: '{so_number}' Show Finished: '{include_finished}'")
 
         return {'product_number': product_number, 'cut_in_full': include_finished, 'so_number': so_number}
     
@@ -225,12 +228,14 @@ class Application(QtWidgets.QMainWindow):
     def check_selected_row_for_cut_jobs(self, selected_row_data):
         """Checks if the selected row has a cut job already created. Then asks the user what they want to do. Ether create a new cut job or select an existing cut job."""
         sales_order_item = SalesOrderItem.from_id(self.cut_list_generator_database, selected_row_data['so_item_id'])
-        product = Product.from_number(self.cut_list_generator_database, selected_row_data['product_number'])
         reply = self.ask_user_direction_for_selected_row(sales_order_item)
         if reply == QMessageBox.NoRole:
-            self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database, product=product, sales_order_item=sales_order_item, parent=self)
+            self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database,
+                                            product=sales_order_item.product,
+                                            sales_order_item=sales_order_item,
+                                            parent=self)
         elif reply == QMessageBox.YesRole:
-            self.create_cut_job()
+            self.create_cut_job(product=sales_order_item.product, linked_so_item=sales_order_item)
         else:
             return
         
@@ -238,7 +243,20 @@ class Application(QtWidgets.QMainWindow):
         """Shows the cut job search dialog. Passes the keyword arguments to the dialog."""
         dialog = CutJobSearchDialog(**kwargs)
         dialog.accepted.connect(lambda: self.load_cut_job(dialog.cut_job))
+        dialog.showMaximized()
+    
+    def show_wire_cutter_dialog(self, **kwargs):
+        """Shows the wire cutter dialog. Passes the keyword arguments to the dialog."""
+        dialog = WireCutterDialog(**kwargs)
         dialog.exec()
+        if dialog.wire_cutter:
+            dialog.wire_cutter.save()
+    
+    def show_wire_cutter_search_dialog(self, **kwargs):
+        """Shows the wire cutter search dialog. Passes the keyword arguments to the dialog. Returns the selected wire cutter."""
+        dialog = WireCutterSearchDialog(**kwargs)
+        dialog.exec()
+        return dialog.wire_cutter
 
     def get_row_data_from_so_table(self, row_num: int) -> dict:
         so_item_id = int(self.ui.sales_order_table_widget.item(row_num, self.headers['Id']['index']).text())
@@ -271,13 +289,13 @@ class Application(QtWidgets.QMainWindow):
         self.load_so_table_data()
 
         
-    def create_cut_job(self, product: Product = None, linked_so_item_id: int = None):
+    def create_cut_job(self, product: Product = None, linked_so_item: SalesOrderItem = None):
         logger.info("[CUT JOB] Creating cut job.")
         # Open a dialog to get the cut job data.
         dialog = CutJobDialog(cut_list_generator_database=self.cut_list_generator_database,
                               fishbowl_database=self.fishbowl_database,
                               product=product,
-                              linked_so_item_id=linked_so_item_id,
+                              linked_so_item=linked_so_item,
                               parent=self)
         if dialog.exec():
             dialog.cut_job.save()
@@ -340,10 +358,14 @@ class Application(QtWidgets.QMainWindow):
                         value = "Yes"
                     else:
                         value = "No"
+                elif isinstance(value, datetime.datetime):
+                    value = value.strftime(self.date_format)
 
                 column_index = self.headers[key]['index']
                 # width = self.get_max_width_for_column(table_data, key) * 2
                 width = self.headers[key]['width']
+                if key == "Description":
+                    width = 200
                 self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(value)))
                 self.ui.sales_order_table_widget.setColumnWidth(column_index, width)
 
@@ -394,7 +416,7 @@ def main():
     try:
         app = QApplication(sys.argv)
         main_window = Application()
-        main_window.show()
+        main_window.showMaximized()
         app.exec_()
 
         main_window.fishbowl_database.disconnect()

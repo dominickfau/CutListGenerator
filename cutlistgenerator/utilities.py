@@ -164,7 +164,7 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
 
 
 def create_default_system_properties(database_connection: CutListDatabase):
-    logger.info("[SYSTEM PROPERTY] Creating default system properties.")
+    logger.info("[SYSTEM PROPERTY] Checking that all system properties exist.")
 
     if not SystemProperty.find_by_name(database_connection=database_connection, name="list_to_string_delimiter"):
         logger.info("[SYSTEM PROPERTY] Adding default system property 'list_to_string_delimiter'.")
@@ -195,9 +195,26 @@ def create_default_system_properties(database_connection: CutListDatabase):
                         value=["BC-"],
                         visible=True).save()
     
-    logger.info("[SYSTEM PROPERTY] Default system properties created.")
+    if not SystemProperty.find_by_name(database_connection=database_connection, name="date_formate"):
+        logger.info("[SYSTEM PROPERTY] Adding default system property 'date_formate'.")
+        SystemProperty(database_connection=database_connection,
+                        name="date_formate",
+                        value="%m-%d-%Y %I:%M %p",
+                        visible=True).save()
+    
+    logger.info("[SYSTEM PROPERTY] Finished. All system properties should now exist.")
 
 def create_database(database_connection: CutListDatabase):
     database_connection.create()
     logger.info("[DATABASE] Adding default data to tables.")
     create_default_system_properties(database_connection)
+
+def get_table_headers(table_widget) -> dict:
+    """Returns a dict of the headers for the given table widget."""
+    headers = {}
+    for index in range(table_widget.columnCount()):
+        header = table_widget.horizontalHeaderItem(index)
+        if header is not None:
+            width = len(header.text()) * 10
+            headers[header.text()] = {'index': index, 'width': width}
+    return headers
