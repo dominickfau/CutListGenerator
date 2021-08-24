@@ -364,7 +364,7 @@ def get_table_headers(table_widget) -> dict:
         header = table_widget.horizontalHeaderItem(index)
         if header is not None:
             header_name = header.text()
-            width = len(header_name) * len(header_name) / 2
+            width = len(header_name) + (len(header_name) * 8)
             width = int(width)
             headers[header_name] = {'index': index, 'width': width}
     return headers
@@ -373,12 +373,12 @@ def get_max_column_widths(table_data: List[dict], table_headers: dict) -> int:
     """Returns the maximum width for each column."""
     max_column_widths = table_headers
 
-    # for column_name, column_data in table_headers.items():
-    #     for row_data in table_data:
-    #         if column_name in row_data:
-    #             cell_type = type(row_data[column_name])
-    #             cell_value = str(row_data[column_name])
-    #             cell_legnth = len(cell_value) * 10
-    #             if cell_legnth > max_column_widths[column_name]['width']:
-    #                 max_column_widths[column_name]['width'] = cell_legnth
+    for column_name, column_data in table_headers.items():
+        for row_data in table_data:
+            if column_name in row_data:
+                cell_type = type(row_data[column_name])
+                cell_value = str(row_data[column_name])
+                cell_legnth = len(cell_value) + (len(cell_value) * 3)
+                if cell_legnth > max_column_widths[column_name]['width']:
+                    max_column_widths[column_name]['width'] = cell_legnth
     return max_column_widths
