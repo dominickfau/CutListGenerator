@@ -88,17 +88,17 @@
     </item>
     <item>
      <widget class="QTableWidget" name="sales_order_table_widget">
+      <property name="contextMenuPolicy">
+       <enum>Qt::ActionsContextMenu</enum>
+      </property>
       <property name="editTriggers">
        <set>QAbstractItemView::NoEditTriggers</set>
       </property>
       <property name="selectionBehavior">
        <enum>QAbstractItemView::SelectRows</enum>
       </property>
-      <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
-       <bool>false</bool>
-      </attribute>
-      <attribute name="verticalHeaderStretchLastSection">
-       <bool>false</bool>
+      <attribute name="horizontalHeaderStretchLastSection">
+       <bool>true</bool>
       </attribute>
       <column>
        <property name="text">
@@ -234,7 +234,14 @@
     <addaction name="actionWire_Cutter_Edit"/>
     <addaction name="menuOptions"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionAdd_To_Exclude_List"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuFishbowl_2"/>
    <addaction name="menuCut_Job"/>
    <addaction name="menuReports"/>
@@ -500,6 +507,17 @@
   <action name="actionWire_Cutter_Option">
    <property name="text">
     <string>Add To Cutter</string>
+   </property>
+  </action>
+  <action name="actionAdd_To_Exclude_List">
+   <property name="text">
+    <string>Add To Exclude List</string>
+   </property>
+   <property name="toolTip">
+    <string>Add the product number for the selected row to sales order item exclusion list.</string>
+   </property>
+   <property name="statusTip">
+    <string>Add the product number for the selected row to sales order item exclusion list.</string>
    </property>
   </action>
  </widget>

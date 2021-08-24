@@ -1,7 +1,7 @@
 from cutlistgenerator.appdataclasses.salesorder import SalesOrder, SalesOrderItem
 from cutlistgenerator.appdataclasses import product
 from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
-import sys, os, traceback, datetime
+import sys, os, traceback, datetime, inspect
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMessageBox, QProgressBar, QPushButton
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSlot, pyqtSignal, QObject, Qt
@@ -104,6 +104,9 @@ class Application(QtWidgets.QMainWindow):
         # self.ui.actionHelp.triggered.connect(self.show_help_dialog)
         # self.ui.actionAbout.triggered.connect(self.show_about_dialog)
 
+        # Edit
+        self.ui.actionAdd_To_Exclude_List.triggered.connect(self.add_to_exclude_list)
+
         # Fishbowl
         self.ui.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
 
@@ -120,6 +123,13 @@ class Application(QtWidgets.QMainWindow):
         # self.ui.actionExport_Product_List.triggered.connect(self.export_product_list)
         # self.ui.actionExport_Wire_Cutter_List.triggered.connect(self.export_wire_cutter_list)
         # self.ui.actionExport_Wire_Cutter_Options_List.triggered.connect(self.export_wire_cutter_options_list)
+
+
+        # Table Context Menu Items
+        # TODO: Rework last 2 items.
+        self.ui.sales_order_table_widget.addAction(self.ui.actionAdd_To_Exclude_List)
+        self.ui.sales_order_table_widget.addAction(self.ui.action_cut_job_Create_Blank)
+        self.ui.sales_order_table_widget.addAction(self.ui.action_cut_job_Show_All_Open)
 
         # Wire Cutter
         self.ui.actionWire_Cutter_New.triggered.connect(lambda: self.show_wire_cutter_dialog(cut_list_generator_database=self.cut_list_generator_database,
@@ -160,6 +170,70 @@ class Application(QtWidgets.QMainWindow):
         
         self.date_formate = SystemProperty.find_by_name(database_connection=self.cut_list_generator_database, name="date_formate").value
         self.load_so_table_data()
+
+    def add_to_exclude_list(self):
+        """Finds the selected row in the sales order table and adds it to the exclude list."""
+        selected_row = self.ui.sales_order_table_widget.currentRow()
+        if selected_row != -1:
+            product_number = self.ui.sales_order_table_widget.item(selected_row, self.headers['Product Number']['index']).text()
+            product = Product.from_number(self.cut_list_generator_database, product_number)
+            if not product:
+                lines = "\n".join([str(line) for line in inspect.stack()])
+                logger.error(f"[EXCLUDE LIST] Product not found: {product_number}")
+                msg = ResizableMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setWindowTitle("Error")
+                msg.setText(f"Product not found: {product_number}")
+                msg.setDetailedText(f"The product number {product_number} could not be found in the database.\n\nStack:\n{lines}")
+                msg.exec()
+                return
+
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Add to Exclude List")
+            msg.setText(f"Are you sure you want to add {product_number} to the exclude list?")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg.setDefaultButton(QMessageBox.Yes)
+            ret = msg.exec()
+            if ret == QMessageBox.No:
+                return
+            
+            system_property = SystemProperty.find_by_name(database_connection=self.cut_list_generator_database, name="exclude_product_numbers_from_import")
+            if system_property is None:
+                system_property = SystemProperty(name="exclude_product_numbers_from_import", value=[product_number])
+            
+            if product_number not in system_property.value:
+                logger.info(f"Adding {product_number} to exclude list.")
+                system_property.value.append(product_number)
+                system_property.save()
+            
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Update Sales Orders")
+            msg.setText(f"{product_number} has been added to the exclude list.")
+            msg.setInformativeText("Do you want to remove this product from all sales orders?")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg.setDefaultButton(QMessageBox.Yes)
+            ret = msg.exec()
+            if ret == QMessageBox.No:
+                return
+            
+            # Double check that the user is sure.
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setWindowTitle("Remove Sales Order Items")
+            msg.setText(f"Are you sure you want to remove all sales order items for {product_number}?")
+            msg.setInformativeText("This action cannot be undone! This action will remove all sales order items for this product from all sales orders.")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg.setDefaultButton(QMessageBox.No)
+            ret = msg.exec()
+            if ret == QMessageBox.No:
+                return
+            
+            # Remove all items from all sales orders.
+            logger.warning(f"Removing all sales order items for {product_number}.")
+            SalesOrder.remove_all_sales_order_items_for_product(database_connection=self.cut_list_generator_database, product=product)
+            self.load_so_table_data()
 
     def get_so_search_data(self):
         include_finished = self.ui.so_search_include_finished_check_box.isChecked()

@@ -487,6 +487,19 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.close()
     
     # Sales Order methods
+    def get_sales_order_by_id(self, id: int) -> dict:
+        values = {
+            'id': id
+        }
+
+        cursor = self.get_cursor()
+        cursor.execute("SELECT * FROM sales_order WHERE id = %(id)s", values)
+        sales_order = cursor.fetchone()
+        cursor.close()
+        if not sales_order:
+            return None
+        return sales_order
+
     def get_sales_order_by_number(self, number: str) -> dict:
         values = {
             'number': number
@@ -525,7 +538,6 @@ class MySQLDatabaseConnection(CutListDatabase):
                     "sales_order_items": sales_order_items
                 }
 
-
     def get_all_sales_orders(self) -> List[dict]:
         cursor = self.get_cursor()
         cursor.execute("SELECT * FROM sales_order")
@@ -539,6 +551,21 @@ class MySQLDatabaseConnection(CutListDatabase):
         # TODO: Check how fast this is.
         all_orders = self.get_all_sales_orders()
         return [order for order in all_orders if order['customer_name'] == customer_name]
+    
+    def get_sales_orders_containing_product(self, product) -> List[dict]:
+        values = {
+            'product_id': product.id
+        }
+
+        cursor = self.get_cursor()
+        cursor.execute("""SELECT DISTINCT sales_order_id
+                            FROM sales_order_item
+                            WHERE sales_order_item.product_id = %(product_id)s""", values)
+        data = cursor.fetchall()
+        cursor.close()
+        if not data:
+            return []
+        return data
     
     def save_sales_order(self, sales_order) -> int:
         values = {
@@ -568,6 +595,11 @@ class MySQLDatabaseConnection(CutListDatabase):
         # Iterate through all of the sales order items and delete them.
         for item in sales_order["sales_order_items"]:
             self.delete_sales_order_item(item)
+        
+        cursor = self.get_cursor()
+        cursor.execute("DELETE FROM sales_order WHERE id = %(id)s", values)
+        cursor.execute("COMMIT;")
+        cursor.close()
     
     # CutJobs methods
     def get_all_cut_jobs(self) -> List[dict]:
@@ -758,7 +790,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             system_property_id = cursor.lastrowid
         else:
             cursor.execute("""UPDATE system_properties
-                                SET name = %(name)s, value = %(system_value)s,
+                                SET name = %(name)s, value = %(value)s,
                                 date_last_modified = %(date_last_modified)s,
                                 read_only = %(read_only)s,
                                 visible = %(visible)s,

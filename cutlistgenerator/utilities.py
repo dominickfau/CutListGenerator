@@ -328,6 +328,13 @@ def create_default_system_properties(database_connection: CutListDatabase):
                         value="%m-%d-%Y %I:%M %p",
                         visible=True).save()
     
+    if not SystemProperty.find_by_name(database_connection=database_connection, name="exclude_product_numbers_from_import"):
+        logger.info("[SYSTEM PROPERTY] Adding default system property 'exclude_product_numbers_from_import'.")
+        SystemProperty(database_connection=database_connection,
+                        name="exclude_product_numbers_from_import",
+                        value=["test", "test2"],
+                        visible=True).save()
+    
     logger.info("[SYSTEM PROPERTY] Finished. All system properties should now exist.")
 
 def create_database(database_connection: CutListDatabase):

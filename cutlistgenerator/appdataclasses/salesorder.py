@@ -157,6 +157,42 @@ class SalesOrder:
         if self.order_items is None:
             self.order_items = []
     
+    @staticmethod
+    def remove_all_sales_order_items_for_product(database_connection: CutListDatabase, product: Product) -> None:
+        """Removes all sales order items for a given product."""
+
+        data = database_connection.get_sales_orders_containing_product(product)
+        for row in data:
+            sales_order_id = row['sales_order_id']
+            sales_order = SalesOrder.from_id(database_connection, sales_order_id)
+            for item in sales_order.order_items:
+                if item.product.id != product.id:
+                    continue
+                sales_order.remove_item(item)
+            sales_order.save()
+
+    @classmethod
+    def from_id(cls, database_connection: CutListDatabase, sales_order_id: int) -> 'SalesOrder':
+        """Returns a sales order from the database by its ID. Returns None if not found."""
+
+        data = database_connection.get_sales_order_by_id(sales_order_id)
+        if not data:
+            return None
+
+        sales_order = cls(database_connection, **data)
+
+        # Add the order items
+        for item in database_connection.get_sales_order_items_by_sales_order_id(sales_order.id):
+            # id, sales_order_id, qty_to_fulfill, line_number, qty_picked, qty_fulfilled, due_date
+
+            product = Product.from_id(database_connection, id=item['product_id'])
+
+            order_item = SalesOrderItem.from_id(database_connection, sales_order_item_id=item['id'])
+
+            sales_order.add_item(order_item)
+
+        return sales_order
+
     @classmethod
     def from_sales_order_item_id(cls, database_connection: CutListDatabase, sales_order_item_id: int) -> 'SalesOrder':
         """Returns a sales order from the database by one of its items ID. Returns None if not found."""
@@ -239,4 +275,11 @@ class SalesOrder:
         for item in self.order_items:
             item.sales_order_id = self.id
             item.save()
+    
+    def delete(self):
+        """Delete the sales order."""
+        for item in self.order_items:
+            item.delete()
         
+        self.database_connection.delete_sales_order(self)
+        self.id = None

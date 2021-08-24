@@ -1,4 +1,6 @@
-from . import datetime, dataclass, CutListDatabase
+from . import datetime, CutListDatabase
+from typing import Any
+from dataclasses import dataclass
 
 
 @dataclass
@@ -7,7 +9,7 @@ class SystemProperty:
 
     database_connection: CutListDatabase
     name: str
-    value: str
+    value: Any
     date_last_modified: datetime.datetime = None
     read_only: bool = False
     visible: bool = False
@@ -48,7 +50,16 @@ class SystemProperty:
         data = database_connection.get_system_property_by_name(name)
         if not data:
             return None
-        data.pop('value_type', None)
+        value_type = data.pop('value_type', None)
+        # Convert value from string to the correct type.
+        if value_type == 'int':
+            data['value'] = int(data['value'])
+        elif value_type == 'float':
+            data['value'] = float(data['value'])
+        elif value_type == 'bool':
+            data['value'] = bool(data['value'])
+        elif value_type == 'list':
+            data['value'] = list(data['value'])
         return SystemProperty(database_connection=database_connection, **data)
     
     def set_value(self, value: str) -> None:

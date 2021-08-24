@@ -95,6 +95,11 @@ class CutListDatabase(Database):
 
     # SalesOrder methods
     @abstractmethod
+    def get_sales_order_by_id(self, id: int) -> dict:
+        """Get sales order by id. Returns None if not found."""
+        pass
+
+    @abstractmethod
     def get_sales_order_by_number(self, number: str) -> dict:
         """Get sales order by number. Returns None if not found."""
         pass
@@ -229,4 +234,9 @@ class CutListDatabase(Database):
     @abstractmethod
     def get_sales_order_table_data(self, search_data: dict) -> List[dict]:
         """Get table data for the sales order table."""
+        pass
+
+    @abstractmethod
+    def get_sales_orders_containing_product(self, product) -> List[dict]:
+        """Get all sales orders containing a product. Returns empty list if not found. Returns a list of dicts with the following key: sales_order_id"""
         pass
