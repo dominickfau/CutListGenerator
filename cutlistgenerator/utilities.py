@@ -30,35 +30,6 @@ def touch(path):
     with open(path, 'a'):
         os.utime(path, None)
 
-def add(cut_list_database,
-        current_fishbowl_sales_order,
-        fishbowl_product,
-        fishbowl_line_number,
-        fishbowl_due_date,
-        fishbowl_qty_to_fulfill,
-        fishbowl_qty_picked,
-        fishbowl_qty_fulfilled,
-        fishbowl_child_part_qty_multiple):
-        
-    item_in_order = False
-    for current_item in current_fishbowl_sales_order.order_items:
-        if current_item.product.number == fishbowl_product.number and current_item.line_number == fishbowl_line_number:
-            item_in_order = True
-            break
-
-    if not item_in_order:
-        order_item = SalesOrderItem(database_connection=cut_list_database,
-                                    product=fishbowl_product,
-                                    due_date=fishbowl_due_date,
-                                    qty_to_fulfill=float(fishbowl_qty_to_fulfill) * fishbowl_child_part_qty_multiple,
-                                    qty_picked=float(fishbowl_qty_picked) * fishbowl_child_part_qty_multiple,
-                                    qty_fulfilled=float(fishbowl_qty_fulfilled) * fishbowl_child_part_qty_multiple,
-                                    line_number=fishbowl_line_number,
-                                    sales_order_id=current_fishbowl_sales_order.id)
-        order_item.save()
-        return 1
-    return 0
-
 def find_sales_order_item(database_connection: CutListDatabase, product_number: str, line_number: int, sales_order_number: str) -> Tuple[bool, SalesOrderItem]:
     values = {
         "product_number": product_number,
@@ -75,7 +46,7 @@ def find_sales_order_item(database_connection: CutListDatabase, product_number: 
                         AND sales_order_item.line_number = %(line_number)s
                         AND sales_order.number = %(sales_order_number)s;""", values)
     data = cursor.fetchone()
-    if data is None:
+    if not data:
         return False, None
     
     sales_order_item_id = data['id']
@@ -102,6 +73,10 @@ def add_child_product_recursively(fishbowl_database_connection: FishbowlDatabase
                                   parent_sales_order_item: SalesOrderItem,
                                   child_product_number: str) -> None:
     """Adds child products recursively to a sales order."""
+    global total_rows
+    global rows_inserted
+    global rows_updated
+
     child_product = Product.from_number(cut_list_database, child_product_number)
     # TODO: Add ability to check if this child product should be added to the sales order.
     if child_product:
@@ -117,16 +92,18 @@ def add_child_product_recursively(fishbowl_database_connection: FishbowlDatabase
 
         logger.debug(f"[RECURSIVE SO ITEM] Checking if child product {child_product_number} is already in the sales order.")
         found, sales_order_item = find_sales_order_item(cut_list_database,
-                                                        parent_sales_order.number,
                                                         child_product.number,
-                                                        parent_sales_order_item.line_number)
+                                                        parent_sales_order_item.line_number,
+                                                        parent_sales_order.number)
         if not found:
             logger.debug("[RECURSIVE SO ITEM] Adding child product to the sales order.")
             sales_order_item = SalesOrderItem(database_connection=cut_list_database, **values)
             parent_sales_order.add_item(sales_order_item)
+            rows_inserted += 1
         else:
             logger.debug("[RECURSIVE SO ITEM] Child product already in the sales order.")
-
+            rows_updated += 1
+            
         logger.info(f"[RECURSIVE SO ITEM] Looking for child products for {child_product_number}.")
         data = fishbowl_database_connection.get_child_products_for_product_number(child_product.number)
         for item in data:
@@ -136,6 +113,7 @@ def add_child_product_recursively(fishbowl_database_connection: FishbowlDatabase
                                           parent_sales_order,
                                           parent_sales_order_item,
                                           new_child_product_number)
+            total_rows += 1
 
 def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameters: dict, cut_list_database: CutListDatabase, progress_signal = None):
     # TODO: Add ability to update sales order from fishbowl.
@@ -147,8 +125,6 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
     logger.info("Updating sales order data from fishbowl.")
     add_parent_products = SystemProperty.find_by_name(database_connection=cut_list_database, name="add_parent_products_to_sales_orders").value
     logger.debug(f"[SYSTEM PROPERTY] add_parent_products_to_sales_orders = {add_parent_products}")
-    rows_inserted = 0
-    rows_updated = 0
     products_to_skip = SystemProperty.find_by_name(database_connection=cut_list_database, name="exclude_sales_order_products_starting_with").value
     logger.debug(f"[SYSTEM PROPERTY] products_to_skip = {products_to_skip}")
 
@@ -156,7 +132,14 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
     fishbowl_database = FishbowlDatabaseConnection(fishbowl_database_connection_parameters)
 
     fishbowl_data = fishbowl_database.get_all_open_sales_order_items()
+
+    global total_rows
+    global rows_inserted
+    global rows_updated
+    rows_inserted = 0
+    rows_updated = 0
     total_rows = len(fishbowl_data)
+
     if len(fishbowl_data) == 0:
         logger.info("No open sales orders found in fishbowl database.")
         return
@@ -243,39 +226,45 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
         }
 
         logger.debug(f"Looking for sales order item with SO Number: {so_number} Product Number: {product_number} and Line Number: {line_number} in the database.")
-        found, sales_order_item = find_sales_order_item(cut_list_database, so_number, product_number, line_number)
+        found, sales_order_item = find_sales_order_item(cut_list_database, product_number, line_number, so_number)
         if not found:
             logger.debug("Sales order item not found in database. Creating a new one.")
             sales_order_item = SalesOrderItem(database_connection=cut_list_database, **sales_order_item_data)
             sales_order.add_item(sales_order_item)
+            rows_inserted += 1
+            logger.info(f"Looking for all child products for product number {product.number} to add to the sales order.")
+            child_products = fishbowl_database.get_child_products_for_product_number(product.number)
+            for child_row in child_products:
+                child_product_number = child_row['kit_part_number']
+                add_child_product_recursively(fishbowl_database,
+                                            cut_list_database,
+                                            parent_sales_order=sales_order,
+                                            parent_sales_order_item=sales_order_item,
+                                            child_product_number=child_product_number)
+                total_rows += 1
         else:
+            # TODO: Code to update the sales order item.
             logger.debug("Sales order item found in database. Updating it.")
-        
-        logger.info(f"Looking for all child products for product number {product.number} to add to the sales order.")
-        child_products = fishbowl_database.get_child_products_for_product_number(product.number)
-        for child_row in child_products:
-            child_product_number = child_row['kit_part_number']
-            add_child_product_recursively(fishbowl_database,
-                                          cut_list_database,
-                                          parent_sales_order=sales_order,
-                                          parent_sales_order_item=sales_order_item,
-                                          child_product_number=child_product_number)
+            rows_updated += 1
 
-        row_processing_time_end = datetime.datetime.now()
         logger.debug("Finished processing row.")
-        logger.info(f"Row processing time: {(row_processing_time_end - row_processing_time_start).total_seconds()} seconds.")
+        logger.info(f"Row processing time: {(datetime.datetime.now() - row_processing_time_start).total_seconds()} seconds.")
         fishbowl_sales_orders[so_number] = sales_order
 
     logger.info("Finished processing all open sales orders in fishbowl.")
     logger.info("Saving sales order objects to the database.")
+    logger.info(f"Total row processing time: {(datetime.datetime.now() - update_time_start).total_seconds()} seconds.")
+
+    save_start_time = datetime.datetime.now()
     for so_number in fishbowl_sales_orders:
         logger.debug(f"Saving sales order {so_number}.")
         sales_order = fishbowl_sales_orders[so_number]
         sales_order.save()
+    logger.info("Finished saving all sales orders in fishbowl.")
+    logger.info(f"Total save time: {(datetime.datetime.now() - save_start_time).total_seconds()} seconds.")
 
-    update_time_end = datetime.datetime.now()
     logger.info(f"{rows_inserted} rows inserted from a total of {total_rows} rows.")
-    logger.info(f"Total run time: {(update_time_end - update_time_start).total_seconds()} seconds.")
+    logger.info(f"Total run time: {(datetime.datetime.now() - update_time_start).total_seconds()} seconds.")
     return total_rows, rows_inserted
 
 

@@ -140,3 +140,88 @@ BEGIN
 	SET NEW.date_added = NOW();
 END$$
 DELIMITER ;
+
+
+-- Views
+DROP VIEW IF EXISTS `parent_child_product_relationship`;
+
+CREATE VIEW `parent_child_product_relationship` AS
+SELECT 
+	parent_product.id AS parent_product_id,
+	parent_product.number AS parent_product_number,
+	parent_product.description AS parent_product_description,
+	parent_product.uom AS parent_product_uom,
+	child_product.id AS child_product_id,
+	child_product.number AS child_product_number,
+	child_product.description AS child_product_description,
+	child_product.uom AS child_product_uom
+FROM product parent_product
+LEFT JOIN parent_to_child_product ON parent_to_child_product.parent_product_id = parent_product.id
+LEFT JOIN product child_product ON parent_to_child_product.child_product_id = child_product.id
+ORDER BY parent_product.number;
+
+
+DROP VIEW IF EXISTS `sales_orders`;
+
+CREATE VIEW `sales_orders` AS
+SELECT
+	sales_order.id AS sales_order_id,
+	sales_order_item.date_added AS date_added,
+	sales_order_item.due_date AS due_date,
+	sales_order.customer_name AS customer_name,
+	sales_order.number AS sales_order_number,
+	product.number AS product_number,
+	product.description AS product_description,
+	product.unit_price_dollars AS unit_price_dollars,
+	product.uom AS product_uom,
+	sales_order_item.qty_to_fulfill AS qty_to_fulfill,
+	sales_order_item.qty_picked AS qty_picked,
+	sales_order_item.qty_fulfilled AS qty_fulfilled,
+	(sales_order_item.qty_to_fulfill - sales_order_item.qty_picked - sales_order_item.qty_fulfilled) AS qty_left_to_ship,
+	sales_order_item.cut_in_full AS cut_in_full
+FROM sales_order
+JOIN sales_order_item ON sales_order.id = sales_order_item.sales_order_id
+JOIN product ON sales_order_item.product_id = product.id;
+
+
+DROP VIEW IF EXISTS `so_items_to_cut`;
+
+CREATE VIEW `so_items_to_cut` AS
+SELECT
+	sales_order_item.id AS so_id,
+	DATE_FORMAT(sales_order_item.due_date, '%c-%e-%Y') AS so_item_due_date,
+	sales_order.customer_name AS customer_name,
+	sales_order.number AS so_number,
+	product.number AS product_number,
+	product.description AS description,
+	product.unit_price_dollars AS unit_price,
+	(sales_order_item.qty_to_fulfill - sales_order_item.qty_fulfilled - sales_order_item.qty_picked) AS qty_left_to_ship,
+	product.uom AS uom,
+	sales_order_item.line_number AS line_number,
+	product.kit_flag AS is_child_item,
+	sales_order_item.cut_in_full AS fully_cut,
+	parent_product.number AS parent_number,
+	parent_product.description AS parent_description
+FROM sales_order
+JOIN sales_order_item ON sales_order_item.sales_order_id = sales_order.id
+JOIN product ON sales_order_item.product_id = product.id
+LEFT JOIN parent_to_child_product ON parent_to_child_product.child_product_id = product.id
+LEFT JOIN product parent_product ON parent_to_child_product.parent_product_id = parent_product.id
+ORDER BY product.number, sales_order_item.due_date;
+
+
+DROP VIEW IF EXISTS `wire_cutter_with_options`;
+
+CREATE VIEW `wire_cutter_with_options` AS
+SELECT
+	wire_cutter.id AS wire_cutter_id,
+	wire_cutter.name AS wire_cutter_name,
+	wire_cutter.max_wire_gauge_awg AS max_wire_gauge_awg,
+	wire_cutter.processing_speed_feet_per_minute AS processing_speed_feet_per_minute,
+	wire_cutter.details AS details,
+	wire_cutter_option.id AS wire_cutter_option_id,
+	wire_cutter_option.name AS wire_cutter_option_name,
+	wire_cutter_option.description AS wire_cutter_option_description
+FROM wire_cutter
+LEFT JOIN wire_cutter_to_wire_cutter_option ON wire_cutter.id = wire_cutter_to_wire_cutter_option.wire_cutter_id
+LEFT JOIN wire_cutter_option ON wire_cutter_to_wire_cutter_option.wire_cutter_option_id;

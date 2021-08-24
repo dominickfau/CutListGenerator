@@ -203,14 +203,7 @@ class SalesOrder:
 
             product = Product.from_id(database_connection, id=item['product_id'])
 
-            order_item = SalesOrderItem(database_connection,
-                                        product,
-                                        due_date=item['due_date'],
-                                        qty_to_fulfill=item['qty_to_fulfill'],
-                                        qty_picked=item['qty_picked'],
-                                        qty_fulfilled=item['qty_fulfilled'],
-                                        line_number=item['line_number'],
-                                        sales_order_id=item['sales_order_id'])
+            order_item = SalesOrderItem.from_id(database_connection, sales_order_item_id=item['id'])
 
             sales_order.add_item(order_item)
 
