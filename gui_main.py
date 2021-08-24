@@ -4,7 +4,7 @@ from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 import sys, os, traceback, datetime
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMessageBox, QProgressBar, QPushButton
-from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSlot, pyqtSignal, QObject
+from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSlot, pyqtSignal, QObject, Qt
 
 
 import cutlistgenerator
@@ -62,12 +62,14 @@ class Worker(QRunnable):
         '''
 
         self.kwargs['progress_signal'] = self.signals.progress
+        self.kwargs['progress_data_signal'] = self.signals.progress_data
         result = self.fn(*self.args, **self.kwargs)
         self.signals.result.emit(result)
         self.signals.finished.emit()
 
 class WorkerSignals(QObject):
     progress = pyqtSignal(int)
+    progress_data = pyqtSignal(object)
     finished = pyqtSignal()
     error = pyqtSignal(tuple)
     result = pyqtSignal(object)
@@ -83,6 +85,7 @@ class Application(QtWidgets.QMainWindow):
 
         self.threadpool = QThreadPool()
         self.progressBar = QProgressBar()
+        self.progressBar.setAlignment(Qt.AlignCenter)
         self.headers = utilities.get_table_headers(self.ui.sales_order_table_widget)
 
         self.ui.statusbar.addPermanentWidget(self.progressBar)
@@ -102,7 +105,7 @@ class Application(QtWidgets.QMainWindow):
         # self.ui.actionAbout.triggered.connect(self.show_about_dialog)
 
         # Fishbowl
-        self.ui.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.test)
+        self.ui.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
 
         # Cut Job
         self.ui.action_cut_job_Create_Blank.triggered.connect(lambda: self.create_cut_job())
@@ -157,10 +160,6 @@ class Application(QtWidgets.QMainWindow):
         
         self.date_formate = SystemProperty.find_by_name(database_connection=self.cut_list_generator_database, name="date_formate").value
         self.load_so_table_data()
-    
-    def test(self):
-        utilities.update_sales_order_data_from_fishbowl(cutlistgenerator.program_settings.get_fishbowl_settings()['auth'],
-                                                        self.cut_list_generator_database)
 
     def get_so_search_data(self):
         include_finished = self.ui.so_search_include_finished_check_box.isChecked()
@@ -367,8 +366,11 @@ class Application(QtWidgets.QMainWindow):
                 self.ui.sales_order_table_widget.setColumnWidth(column_index, width)
 
 
-    def update_progess_bar(self, value):
+    def update_progess_bar_value(self, value):
         self.progressBar.setValue(value)
+    
+    def set_progress_bar_text(self, text):
+        self.progressBar.setFormat(text)
 
     def reset_progress_bar(self):
         self.progressBar.setValue(0)
@@ -386,16 +388,17 @@ class Application(QtWidgets.QMainWindow):
         worker.signals.finished.connect(lambda: self.ui.actionGet_Sales_Order_Data.setEnabled(True))
         worker.signals.result.connect(self.show_fishbowl_update_finished_message_box)
         worker.signals.finished.connect(self.reset_progress_bar)
-        worker.signals.progress.connect(self.update_progess_bar)
+        worker.signals.progress.connect(self.update_progess_bar_value)
+        worker.signals.progress_data.connect(self.set_progress_bar_text)
         self.progressBar.show()
         self.progressBar.setValue(0)
         self.threadpool.start(worker)
     
     @staticmethod
-    def get_current_fb_data(fishbowl_database_connection_parameters, cut_list_database, progress_signal):
+    def get_current_fb_data(fishbowl_database_connection_parameters, cut_list_database, progress_signal=None, progress_data_signal=None):
         # TODO: Rework this to enable pySignals to be used.
         start_time = datetime.datetime.now()
-        total_rows, rows_inserted = utilities.update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameters, cut_list_database, progress_signal)
+        total_rows, rows_inserted = utilities.update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameters, cut_list_database, progress_signal, progress_data_signal)
         end_time = datetime.datetime.now()
         time_delta = end_time - start_time
         logger.info(f"[EXECUTION TIME]: {time_delta.total_seconds() *1000} ms")

@@ -115,7 +115,10 @@ def add_child_product_recursively(fishbowl_database_connection: FishbowlDatabase
                                           new_child_product_number)
             total_rows += 1
 
-def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameters: dict, cut_list_database: CutListDatabase, progress_signal = None):
+def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameters: dict,
+                                          cut_list_database: CutListDatabase,
+                                          progress_signal = None,
+                                          progress_data_signal = None):
     # TODO: Add ability to update sales order from fishbowl.
 
     # FIXME: Find a more efficient way to do this.
@@ -149,6 +152,9 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
     logger.info("Creating sales order objects for all open sales orders in fishbowl.")
     fishbowl_sales_orders = {}
     for index, row in enumerate(fishbowl_data, start=1):
+        if progress_signal:
+            progress_signal.emit(index / total_rows * 100)
+
         row_processing_time_start = datetime.datetime.now()
 
         logger.debug(f"[NEXT SALES ORDER ITEM] Processing row {index} of {total_rows}.")
@@ -156,6 +162,8 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
         customer_name = row['customer_name']
 
         logger.debug(f"On Fishbowl sales order {so_number}.")
+        if progress_data_signal:
+            progress_data_signal.emit(f"Processing sales order: {so_number}")
 
         sales_order_data = {
             'customer_name': customer_name,
@@ -256,7 +264,20 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
     logger.info(f"Total row processing time: {(datetime.datetime.now() - update_time_start).total_seconds()} seconds.")
 
     save_start_time = datetime.datetime.now()
-    for so_number in fishbowl_sales_orders:
+
+    # Reset progress bar to 0.
+    if progress_signal:
+        progress_signal.emit(0)
+
+    if progress_data_signal:
+        progress_data_signal.emit("Saving sales orders.")
+
+    for index, so_number in enumerate(fishbowl_sales_orders, start=1):
+        if progress_data_signal:
+            progress_data_signal.emit(f"Saving sales order: {so_number}. {index} of {len(fishbowl_sales_orders)}.")
+
+        if progress_signal:
+            progress_signal.emit(index / total_rows * 100)
         logger.debug(f"Saving sales order {so_number}.")
         sales_order = fishbowl_sales_orders[so_number]
         sales_order.save()
