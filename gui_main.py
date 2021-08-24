@@ -124,6 +124,11 @@ class Application(QtWidgets.QMainWindow):
         # self.ui.actionExport_Wire_Cutter_List.triggered.connect(self.export_wire_cutter_list)
         # self.ui.actionExport_Wire_Cutter_Options_List.triggered.connect(self.export_wire_cutter_options_list)
 
+        # General Context Menu
+        self.addAction(self.ui.action_fishbowl_Get_Sales_Order_Data)
+        self.addAction(self.ui.action_cut_job_Show_All_Open)
+        self.addAction(self.ui.action_cut_job_Create_Blank)
+
 
         # Table Context Menu Items
         # TODO: Rework last 2 items.
