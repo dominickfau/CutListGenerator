@@ -277,7 +277,7 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
             progress_data_signal.emit(f"Saving sales order: {so_number}. {index} of {len(fishbowl_sales_orders)}.")
 
         if progress_signal:
-            progress_signal.emit(index / total_rows * 100)
+            progress_signal.emit(index / len(fishbowl_sales_orders) * 100)
         logger.debug(f"Saving sales order {so_number}.")
         sales_order = fishbowl_sales_orders[so_number]
         sales_order.save()
