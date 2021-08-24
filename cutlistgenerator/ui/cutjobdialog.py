@@ -61,7 +61,7 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
         
         if product:
             self.add_product(product)
-            self.product_number_combo_box.setCurrentText(product.number)
+            self.product_number_combo_box.setCurrentIndex(self.product_number_combo_box.findText(product.number))
 
         if linked_so_item:
             self.link_sales_order_item(linked_so_item)
@@ -126,10 +126,11 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
 
         self.linked_so_item = sales_order_item
         self.sales_order = SalesOrder.from_sales_order_item_id(self.cut_list_generator_database, sales_order_item.id)
-
+        self.product_number_combo_box.setDisabled(True)
         self.linked_sales_order_number_value_label.setText(self.sales_order.number)
         self.linked_sales_order_product_number_value_label.setText(self.linked_so_item.product.number)
         self.linked_sales_order_line_number_value_label.setText(str(self.linked_so_item.line_number))
+        self.add_product(self.linked_so_item.product)
     
     def unlink_sales_order_item(self):
         """Unlinks the sales order item from the cut job."""
@@ -139,6 +140,7 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
         self.linked_sales_order_number_value_label.setText("")
         self.linked_sales_order_product_number_value_label.setText("")
         self.linked_sales_order_line_number_value_label.setText("")
+        self.product_number_combo_box.setDisabled(False)
     
     def on_find_so_item_clicked(self):
         # TODO: Implement. Create a dialog that allows the user to search for a sales order item.
@@ -241,7 +243,7 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
         self.product_number_combo_box.addItem("")
         for product_number in self._valid_product_numbers:
             self.product_number_combo_box.addItem(product_number)
-        self.product_number_combo_box.setCurrentText(product.number)
+        self.product_number_combo_box.setCurrentIndex(self.product_number_combo_box.findText(product.number))
     
     def find_fishbowl_product(self, product_number, show_message_box=True):
         """Find the product in Fishbowl with the given product number."""

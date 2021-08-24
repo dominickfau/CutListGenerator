@@ -142,13 +142,14 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
     rows_inserted = 0
     rows_updated = 0
     total_rows = len(fishbowl_data)
+    products_to_exclude = SystemProperty.find_by_name(database_connection=cut_list_database, name="exclude_product_numbers_from_import").value
+    logger.info(f"[SYSTEM PROPERTY] products_to_exclude = {products_to_exclude}")
 
     if len(fishbowl_data) == 0:
         logger.info("No open sales orders found in fishbowl database.")
         return
     logger.info(f"Found {len(fishbowl_data)} open sales orders in fishbowl database.")
 
-    
     logger.info("Creating sales order objects for all open sales orders in fishbowl.")
     fishbowl_sales_orders = {}
     for index, row in enumerate(fishbowl_data, start=1):
@@ -271,17 +272,26 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
 
     if progress_data_signal:
         progress_data_signal.emit("Saving sales orders.")
-
+    total_skipped = 0
     for index, so_number in enumerate(fishbowl_sales_orders, start=1):
+        sales_order = fishbowl_sales_orders[so_number]
+        sales_order.save(skip_items=True)
+
+        for item in sales_order.order_items:
+            if item.product.number in products_to_exclude:
+                logger.warning(f"Product number: {item.product.number} is in the exclude_product_numbers_from_import list. Removing from the sales order.")
+                total_skipped += 1
+                continue
+            item.save()
         if progress_data_signal:
             progress_data_signal.emit(f"Saving sales order: {so_number}. {index} of {len(fishbowl_sales_orders)}.")
 
         if progress_signal:
             progress_signal.emit(index / len(fishbowl_sales_orders) * 100)
         logger.debug(f"Saving sales order {so_number}.")
-        sales_order = fishbowl_sales_orders[so_number]
-        sales_order.save()
+
     logger.info("Finished saving all sales orders in fishbowl.")
+    logger.warning(f"Total items skipped:{total_skipped}.")
     logger.info(f"Total save time: {(datetime.datetime.now() - save_start_time).total_seconds()} seconds.")
 
     logger.info(f"{rows_inserted} rows inserted from a total of {total_rows} rows.")

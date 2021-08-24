@@ -268,13 +268,14 @@ class SalesOrder:
             self.order_items.remove(item)
             item.delete()
     
-    def save(self):
+    def save(self, skip_items: bool = False):
         """Saves the sales order to the database."""
 
         self.id = self.database_connection.save_sales_order(self)
         for item in self.order_items:
             item.sales_order_id = self.id
-            item.save()
+            if skip_items is False:
+                item.save()
     
     def delete(self):
         """Delete the sales order."""
