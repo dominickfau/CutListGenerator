@@ -134,6 +134,11 @@ class CutListDatabase(Database):
         pass
     
     @abstractmethod
+    def get_sales_order_item_by_product_and_line_number(self, product, line_number: int) -> List[dict]:
+        """Get sales order item by product and line number. Returns None if not found."""
+        pass
+    
+    @abstractmethod
     def get_sales_order_items_by_sales_order_number(self, number: str) -> List[dict]:
         """Get all sales order items for sales order by number. Returns empty list if not found."""
         pass

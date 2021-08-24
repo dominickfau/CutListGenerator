@@ -1,5 +1,5 @@
 DROP DATABASE IF EXISTS `cutlistgenerator_test`;
-CREATE DATABASE `cutlistgenerator_test` /*!40100 DEFAULT CHARACTER SET utf8 */;
+CREATE DATABASE `cutlistgenerator_test` DEFAULT CHARACTER SET utf8;
 USE `cutlistgenerator_test`;
 
 CREATE TABLE `system_properties` (
@@ -52,8 +52,6 @@ CREATE TABLE `wire_cutter` (
   `max_wire_gauge_awg` int(11) DEFAULT NULL,
   `processing_speed_feet_per_minute` int(11) DEFAULT NULL,
   `details` varchar(255) DEFAULT NULL,
-  `date_created` datetime(6) NOT NULL,
-  `date_modified` datetime(6) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name_UNIQUE` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -87,6 +85,8 @@ CREATE TABLE `sales_order_item` (
   `qty_picked` decimal(28,9) NOT NULL,
   `line_number` int(11) NOT NULL,
   `due_date` datetime(6) NOT NULL,
+  `cut_in_full` bit(1) NOT NULL DEFAULT b'0',
+  `date_added` datetime(6) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `FK_buiajikfbgiuadfrgkijsfgbkj_idx` (`sales_order_id`),
   KEY `FK_buiwejfgbuiwefjhbghjarg_idx` (`product_id`),
@@ -108,7 +108,7 @@ CREATE TABLE `cut_job` (
   `product_id` int(11) NOT NULL,
   `related_sales_order_item_id` int(11) DEFAULT NULL,
   `assigned_wire_cutter_id` int(11) NOT NULL,
-  `qty_cut` decimal(28,9) DEFAULT NULL,
+  `quantity_cut` decimal(28,9) DEFAULT NULL,
   `date_cut_start` datetime(6) DEFAULT NULL,
   `date_cut_end` datetime(6) DEFAULT NULL,
   `date_termination_start` datetime(6) DEFAULT NULL,
@@ -119,6 +119,7 @@ CREATE TABLE `cut_job` (
   `is_spliced` bit(1) NOT NULL DEFAULT b'0',
   `is_terminated` bit(1) NOT NULL DEFAULT b'0',
   `is_ready_for_build` bit(1) NOT NULL DEFAULT b'0',
+  `date_created` datetime(6) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `FK_feiugebuihadfjhflfbakuhff_idx` (`related_sales_order_item_id`),
   KEY `FK_herakjhgjhwerjdfvkjejhfg_idx` (`product_id`),
@@ -128,3 +129,14 @@ CREATE TABLE `cut_job` (
   CONSTRAINT `FK_giokjgbkhfkjjhwekjhfkuir` FOREIGN KEY (`assigned_wire_cutter_id`) REFERENCES `wire_cutter` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `FK_herakjhgjhwerjdfvkjejhfg` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+-- TRIGGERS
+DROP TRIGGER IF EXISTS `sales_order_item_BEFORE_INSERT`;
+
+DELIMITER $$
+CREATE DEFINER = CURRENT_USER TRIGGER `sales_order_item_BEFORE_INSERT` BEFORE INSERT ON `sales_order_item` FOR EACH ROW
+BEGIN
+	SET NEW.date_added = NOW();
+END$$
+DELIMITER ;

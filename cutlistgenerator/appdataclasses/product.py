@@ -65,7 +65,8 @@ class Product:
     @classmethod
     def from_id(cls, database_connection: CutListDatabase, id: int) -> 'Product':
         """Returns a product from the database by its ID. Returns None if not found."""
-
+        if not id:
+            return None
         data = database_connection.get_product_by_id(id)
         if not data:
             return None
@@ -76,7 +77,8 @@ class Product:
     
     def set_parent_kit_product(self, parent_kit_product: 'Product'):
         """Sets the parent kit product number for this product."""
-
+        if not parent_kit_product:
+            return
         self.parent_kit_product = parent_kit_product
         self.kit_flag = True
     

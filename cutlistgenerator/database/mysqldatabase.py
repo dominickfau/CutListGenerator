@@ -14,7 +14,7 @@ class MySQLDatabaseConnection(CutListDatabase):
     def connect(self):
         self.connection = mysql.connector.connect(**self.connection_args)
 
-    def __get_cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None, dictionary=True, named_tuple=None):
+    def get_cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None, dictionary=True, named_tuple=None):
         """Get a cursor to the database. Defaults to a dictionary cursor."""
         if not self.connection:
             self.connect()
@@ -30,7 +30,7 @@ class MySQLDatabaseConnection(CutListDatabase):
         """Create the database"""
         pass
         # logger.info("[DATABASE] Creating database.")
-        # cursor = self.__get_cursor(dictionary=False)
+        # cursor = self.get_cursor(dictionary=False)
         # # cursor.execute("SELECT database() AS selected_database;")
         # # selected_database = cursor.fetchone()['selected_database']
 
@@ -58,12 +58,12 @@ class MySQLDatabaseConnection(CutListDatabase):
 
 
     def get_current_version(self) -> dict:
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM database_version ORDER BY id DESC LIMIT 1")
         return cursor.fetchone()
     
     def get_product_by_number(self, number: str) -> dict:
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         values = {
             'number': number
         }
@@ -76,7 +76,7 @@ class MySQLDatabaseConnection(CutListDatabase):
         return product
     
     def get_product_by_id(self, id: int) -> dict:
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         values = {
             'id': id
         }
@@ -89,7 +89,7 @@ class MySQLDatabaseConnection(CutListDatabase):
         return product
     
     def get_all_products(self) -> List[dict]:
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM product ORDER BY number")
         products = cursor.fetchall()
         cursor.close()
@@ -113,7 +113,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': product.id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
 
         if product.id is None:
             cursor.execute("""INSERT INTO product (number, description, uom, unit_price_dollars, kit_flag)
@@ -143,7 +143,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': product.id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("DELETE FROM product WHERE id = %(id)s", values)
         cursor.execute("COMMIT;")
         cursor.close()
@@ -153,7 +153,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'child_product_id': child_product_id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("""SELECT product.*
                         FROM parent_to_child_product
                         JOIN product ON parent_to_child_product.parent_product_id = product.id
@@ -171,7 +171,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': wire_cutter_option_id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM wire_cutter_option WHERE id = %(id)s", values)
         wire_cutter_option = cursor.fetchone()
         cursor.close()
@@ -184,7 +184,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'name': wire_cutter_option_name
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM wire_cutter_option WHERE name = %(name)s", values)
         wire_cutter_option = cursor.fetchone()
         cursor.close()
@@ -197,7 +197,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'wire_cutter_id': wire_cutter_id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("""
                 SELECT wire_cutter_option.* FROM wire_cutter_option
                 JOIN wire_cutter_to_wire_cutter_option ON wire_cutter_option.id = wire_cutter_to_wire_cutter_option.wire_cutter_option_id
@@ -214,7 +214,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'wire_cutter_name': wire_cutter_name
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("""
                 SELECT wire_cutter_option.* FROM wire_cutter_option
                 JOIN wire_cutter_to_wire_cutter_option ON wire_cutter_option.id = wire_cutter_to_wire_cutter_option.wire_cutter_option_id
@@ -233,7 +233,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': wire_cutter_option.id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         if wire_cutter_option.id is None:
             cursor.execute("""INSERT INTO wire_cutter_option (name, descrition)
                                 VALUES(%(name)s, %(description)s)""", values)
@@ -251,7 +251,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': wire_cutter_option.id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("DELETE FROM wire_cutter_option WHERE id = %(id)s", values)
         cursor.execute("COMMIT;")
         cursor.close()
@@ -262,7 +262,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'name': name
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM wire_cutter WHERE name = %(name)s", values)
         wire_cutter = cursor.fetchone()
         cursor.close()
@@ -275,7 +275,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': wire_cutter_id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM wire_cutter WHERE id = %(id)s", values)
         wire_cutter = cursor.fetchone()
         cursor.close()
@@ -286,7 +286,7 @@ class MySQLDatabaseConnection(CutListDatabase):
     def get_all_wire_cutters(self) -> dict:
         """Gets a list of all wire cutters in the database. Along with any options."""
         wire_cutters = {}
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM wire_cutter")
         wire_cutter_data = cursor.fetchall()
         for wire_cutter in wire_cutter_data:
@@ -305,7 +305,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'details': wire_cutter.details,
             'id': wire_cutter.id
         }
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
 
         # Save the wire_cutter
         if wire_cutter.id is None:
@@ -350,7 +350,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': wire_cutter.id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("DELETE FROM wire_cutter WHERE id = %(id)s", values)
 
         # Delete the wire_cutter_to_wire_cutter_option relationship
@@ -367,7 +367,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'sales_order_id': sales_order_id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("""SELECT * FROM sales_order_item
                             WHERE sales_order_id = %(sales_order_id)s""", values)
         items = cursor.fetchall()
@@ -381,7 +381,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': sales_order_item_id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM sales_order_item WHERE id = %(id)s", values)
         sales_order_item = cursor.fetchone()
         cursor.close()
@@ -389,17 +389,17 @@ class MySQLDatabaseConnection(CutListDatabase):
             return None
         return sales_order_item
 
-    def get_sales_order_item_by_product_number_and_line_number(self, product_number: str, line_number: int) -> List[dict]:
+    def get_sales_order_item_by_product_and_line_number(self, product, line_number: int) -> List[dict]:
         # TODO: Change query.
         values = {
-            'product_number': product_number,
+            'product_number': product.number,
             'line_number': line_number
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("""
             SELECT sales_order_item.id AS so_item_id,
-                sales_order_item.so_id AS so_id,
+                sales_order_item.sales_order_id AS so_id,
                 sales_order_item.due_date AS due_date,
                 sales_order_item.qty_to_fulfill AS qty_to_fulfill,
                 sales_order_item.qty_picked AS qty_picked,
@@ -410,16 +410,17 @@ class MySQLDatabaseConnection(CutListDatabase):
                 product.uom AS uom,
                 product.unit_price_dollars AS unit_price_dollars,
                 product.kit_flag AS kit_flag,
-                product.parent_kit_product_number AS parent_kit_product_number
+                parent_to_child_product.parent_product_id AS parent_kit_product_id
 
             FROM sales_order_item
             JOIN product ON sales_order_item.product_id = product.id
+            LEFT JOIN parent_to_child_product ON product.id = parent_to_child_product.child_product_id
             WHERE product.number = %(product_number)s
             AND sales_order_item.line_number = %(line_number)s""", values)
         sales_order_items = cursor.fetchall()
         cursor.close()
         if not sales_order_items:
-            return []
+            return None
         return sales_order_items
     
     def get_sales_order_items_by_sales_order_number(self, number: str) -> List[dict]:
@@ -428,7 +429,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'number': number
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("""
             SELECT sales_order_item.*
             FROM sales_order_item
@@ -453,7 +454,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'cut_in_full': sales_order_item.cut_in_full
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         if sales_order_item.id is None:
             cursor.execute("""INSERT INTO sales_order_item (sales_order_id, due_date, product_id, qty_to_fulfill, qty_fulfilled, qty_picked, line_number, cut_in_full)
                                 VALUES(%(sales_order_id)s, %(due_date)s, %(product_id)s, %(qty_to_fulfill)s, %(qty_fulfilled)s, %(qty_picked)s, %(line_number)s, %(cut_in_full)s)""", values)
@@ -480,7 +481,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': sales_order_item.id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("DELETE FROM sales_order_item WHERE id = %(id)s", values)
         cursor.execute("COMMIT;")
         cursor.close()
@@ -491,7 +492,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'number': number
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM sales_order WHERE number = %(number)s", values)
         sales_order = cursor.fetchone()
         cursor.close()
@@ -504,7 +505,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'sales_order_item_id': sales_order_item_id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM sales_order_item WHERE id = %(sales_order_item_id)s", values)
         sales_order_items = cursor.fetchall()
         if not sales_order_items:
@@ -526,7 +527,7 @@ class MySQLDatabaseConnection(CutListDatabase):
 
 
     def get_all_sales_orders(self) -> List[dict]:
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM sales_order")
         sales_orders = cursor.fetchall()
         cursor.close()
@@ -546,7 +547,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': sales_order.id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         if sales_order.id is None:
             cursor.execute("""INSERT INTO sales_order (number, customer_name)
                                 VALUES(%(number)s, %(customer_name)s)""", values)
@@ -570,7 +571,7 @@ class MySQLDatabaseConnection(CutListDatabase):
     
     # CutJobs methods
     def get_all_cut_jobs(self) -> List[dict]:
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM cut_job")
         cut_jobs = cursor.fetchall()
         cursor.close()
@@ -579,7 +580,7 @@ class MySQLDatabaseConnection(CutListDatabase):
         return cut_jobs
 
     def get_all_uncut_cut_jobs(self) -> List[dict]:
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM cut_job WHERE is_cut = 0")
         cut_jobs = cursor.fetchall()
         cursor.close()
@@ -588,7 +589,7 @@ class MySQLDatabaseConnection(CutListDatabase):
         return cut_jobs
     
     def get_all_open_cut_jobs(self) -> List[dict]:
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM cut_job WHERE is_ready_for_build = 0")
         cut_jobs = cursor.fetchall()
         cursor.close()
@@ -612,7 +613,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'so_item_id': so_item_id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM cut_job WHERE related_sales_order_item_id = %(so_item_id)s", values)
         cut_jobs = cursor.fetchall()
         cursor.close()
@@ -625,7 +626,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM cut_job WHERE id = %(id)s", values)
         cut_job = cursor.fetchone()
         cursor.close()
@@ -662,7 +663,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'date_created': cut_job.date_created
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         if cut_job.id is None:
             cursor.execute("""INSERT INTO cut_job (product_id, related_sales_order_item_id, assigned_wire_cutter_id,
                                                     quantity_cut, date_cut_start, date_cut_end, date_termination_start, date_termination_end,
@@ -691,14 +692,14 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': cut_job["id"]
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("DELETE FROM cut_job WHERE id = %(id)s", values)
         cursor.execute("COMMIT;")
         cursor.close()
 
     # System Properties methods
     def get_all_system_properties(self) -> List[dict]:
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM system_properties")
         system_properties = cursor.fetchall()
         cursor.close()
@@ -711,7 +712,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'name': name
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM system_properties WHERE name = %(name)s", values)
         system_property = cursor.fetchone()
         cursor.close()
@@ -750,7 +751,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': system_property.id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         if system_property.id is None:
             cursor.execute("""INSERT INTO system_properties (name, value, date_last_modified, read_only, visible, value_type)
                                 VALUES(%(name)s, %(value)s,%(date_last_modified)s, %(read_only)s, %(visible)s, %(value_type)s)""", values)
@@ -773,7 +774,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             'id': system_property.id
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("DELETE FROM system_properties WHERE id = %(id)s", values)
         cursor.execute("COMMIT;")
         cursor.close()
@@ -781,7 +782,7 @@ class MySQLDatabaseConnection(CutListDatabase):
     # Convenience methods
     def get_sales_order_table_data(self, search_data: dict) -> List[dict]:
         """Get table data for the sales order table."""
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         
 
         if len(search_data) == 0:

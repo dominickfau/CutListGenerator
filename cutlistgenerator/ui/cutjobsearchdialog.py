@@ -15,6 +15,7 @@ from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 logger = FileLogger(__name__)
 
 class CutJobSearchDialog(Ui_cut_job_search_dialog, QDialog):
+    # TODO: Convert into a persistant dialog.
     def __init__(self,
                 cut_list_generator_database: CutListDatabase,
                 product: Product = None,

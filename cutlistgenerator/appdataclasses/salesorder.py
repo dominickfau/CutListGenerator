@@ -3,7 +3,6 @@ from . import CutListDatabase
 from .product import Product
 
 
-
 @dataclass
 class SalesOrderItem:
     """Represents a sales order item."""
@@ -20,10 +19,38 @@ class SalesOrderItem:
     date_added: datetime.datetime = None
     
     @classmethod
-    def find_by_product_number_and_line_number(cls, database_connection: CutListDatabase, product_number, line_number) -> 'SalesOrderItem':
-        """Finds a sales order item by product number and line number. Returns None if not found."""
-        raise NotImplementedError()
-        items = database_connection.get_sales_order_items_by_sales_order_number()
+    def find_by_product_and_line_number(cls, database_connection: CutListDatabase, product: Product, line_number: str) -> List['SalesOrderItem']:
+        """Finds a sales order item by product and line number. Returns empty list if not found."""
+        sales_order_items = []
+        data = database_connection.get_sales_order_item_by_product_and_line_number(product, line_number)
+        if not data:
+            return []
+        
+        for row in data:
+            product_data = {
+                'id': data['product_id'],
+                'number': data['product_name'],
+                'description': data['product_description'],
+                'uom': data['product_uom'],
+                'unit_price_dollars': data['product_unit_price_dollars'],
+                'kit_flag': data['kit_flag'],
+                'parent_kit_product': Product.from_id(database_connection, data['parent_kit_product_id'])
+            }
+            product = Product(database_connection, **product_data)
+            
+            sales_order_item_data = {
+                'id': data['id'],
+                'product': product,
+                'due_date': data['due_date'],
+                'qty_to_fulfill': data['qty_to_fulfill'],
+                'qty_picked': data['qty_picked'],
+                'qty_fulfilled': data['qty_fulfilled'],
+                'line_number': data['line_number'],
+                'sales_order_id': data['so_id']
+            }
+            sales_order_item = SalesOrderItem(database_connection, **sales_order_item_data)
+            sales_order_items.append(sales_order_item)
+        return sales_order_items
 
     @classmethod
     def from_id(cls, database_connection: CutListDatabase, sales_order_item_id: int) -> 'SalesOrderItem':
@@ -191,7 +218,8 @@ class SalesOrder:
 
     def add_item(self, item: SalesOrderItem):
         """Add a sales order item to this sales order."""
-        
+        if item in self.order_items:
+            return
         self.order_items.append(item)
     
     def remove_item(self, order_item: SalesOrderItem):
@@ -214,6 +242,8 @@ class SalesOrder:
     def save(self):
         """Saves the sales order to the database."""
 
-        for item in self.order_items:
-            item.save()
         self.id = self.database_connection.save_sales_order(self)
+        for item in self.order_items:
+            item.sales_order_id = self.id
+            item.save()
+        

@@ -20,11 +20,11 @@ class FishbowlDatabaseConnection(Database):
         raise NotImplementedError("This method is not implemented. A Fishbowl database must be created when installing Fishbowl.")
     
     def get_current_version(self) -> dict:
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("SELECT * FROM databaseversion ORDER BY id DESC LIMIT 1")
         return cursor.fetchone()
 
-    def __get_cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None, dictionary=True, named_tuple=None):
+    def get_cursor(self, buffered=None, raw=None, prepared=None, cursor_class=None, dictionary=True, named_tuple=None):
         """Get a cursor to the database. Defaults to a dictionary cursor."""
         if not self.connection:
             self.connect()
@@ -35,18 +35,21 @@ class FishbowlDatabaseConnection(Database):
         """Returns a list of dictionaries containing the sales order number, product number,
         and product name for all open sales order items."""
 
-        logger.info("[FISHBOWL] Searching for open sales orders.")
+        logger.info("[FISHBOWL] Retrieveing all open sales order items.")
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
+        # CASE 
+        #     WHEN customer.name = "Brunswick Boat Group, Fort Wayne Operatio" THEN "Brunswick"
+        #     WHEN customer.name = "GODFREY MARINE-HURRICANE" THEN "Godfrey"
+        #     WHEN customer.name = "MARINE MOORING, INC." THEN "Marine Mooring"
+        #     WHEN customer.name = "Bennington Pontoon Boats" THEN "Bennington"
+        #     ELSE customer.name
+        # END AS customer_name,
+
         cursor.execute("""
-                SELECT so.num AS so_number,
-                    CASE 
-                        WHEN customer.name = "Brunswick Boat Group, Fort Wayne Operatio" THEN "Brunswick"
-                        WHEN customer.name = "GODFREY MARINE-HURRICANE" THEN "Godfrey"
-                        WHEN customer.name = "MARINE MOORING, INC." THEN "Marine Mooring"
-                        WHEN customer.name = "Bennington Pontoon Boats" THEN "Bennington"
-                        ELSE customer.name
-                    END AS customer_name,
+                SELECT so.id AS so_id,
+                    so.num AS so_number,
+                    customer.name AS customer_name,
                     CASE
                         WHEN customerparts.lastPrice THEN customerparts.lastPrice
                         ELSE product.price
@@ -69,89 +72,54 @@ class FishbowlDatabaseConnection(Database):
                 WHERE soitem.statusId < 50 -- 50 = Finished
                 AND (soitem.qtyToFulfill - qtyPicked - qtyFulfilled) > 0
                 -- AND DATE_SUB(so.dateFirstShip, INTERVAL 14 DAY) < NOW()
-                AND productuom.code = "ea";
+                AND productuom.code = "ea"
+                ORDER BY so.num, product.num;
         """)
         data = cursor.fetchall()
         cursor.close()
         if not data:
-            logger.info("[FISHBOWL] No open sales order items found.")
             return []
-        logger.info(f"[FISHBOWL] Found {len(data)} open sales order items.")
         return data
     
-    def get_kit_items_for_product_number(self, product_number: str) -> List[dict]:
-        """Finds all the kit items for a product number. Returns a list of dictionaries
-            with the child_part_number, and child_part_qty as keys."""
-
-        logger.debug(f"[FISHBOWL] Searching for child kit items for product number {product_number}.")
-        kit_items = []
-
-        cursor = self.__get_cursor()
+    def get_child_products_for_product_number(self, product_number: str) -> List[dict]:
+        """Returns a dictionary list of all child items for a product number. Returns an empty list if no child items are found."""
         values = {
             'product_number': product_number
         }
 
-        cursor.execute("""
-            SELECT 
-                -- finishedpart.num AS product_number,
-                rawpart.num AS child_part_number,
-                bomitem.quantity AS child_part_quantity
-            FROM product
-            JOIN part finishedpart ON product.partId = finishedpart.id
-            JOIN bomitem ON finishedpart.defaultBomId = bomitem.bomId
-            JOIN part rawpart ON bomitem.partId = rawpart.id
-            WHERE product.num = %(product_number)s
-            AND bomitem.typeId = (
-                                SELECT id
-                                FROM bomitemtype
-                                WHERE name = "Raw Good"
-                                )
-            AND ((CHAR_LENGTH(rawpart.num) >= 11 AND rawpart.uomId = (SELECT id FROM uom WHERE name = "Each")) OR rawpart.num LIKE "50%")
-            AND rawpart.typeId = (SELECT id FROM parttype WHERE name = "Inventory");
-        """, values)
-        kit_items = cursor.fetchall()
+        cursor = self.get_cursor()
+        cursor.execute("""SELECT DISTINCT
+                            rawpart.num AS kit_part_number,
+                            rawpart.description AS kit_part_description
+                        FROM product
+                        JOIN part finishedpart ON product.partId = finishedpart.id
+                        JOIN bomitem ON finishedpart.defaultBomId = bomitem.bomId
+                        JOIN part rawpart ON bomitem.partId = rawpart.id
+                        WHERE product.num = %(product_number)s
+                        AND bomitem.typeId = (
+                                            SELECT id
+                                            FROM bomitemtype
+                                            WHERE name = "Raw Good"
+                                            )
+                        AND (rawpart.num LIKE "500%" OR (replace(UPPER(rawpart.num), "BC-", "") >= 10000000 AND rawpart.num LIKE "BC-%"))
+                        AND rawpart.typeId = (SELECT id FROM parttype WHERE name = "Inventory");
+                        """, values)
+        data = cursor.fetchall()
         cursor.close()
-        if not kit_items:
-            logger.debug(f"[FISHBOWL] No child kit items found for product number {product_number}.")
+        if not data:
             return []
-        logger.debug(f"[FISHBOWL] Found {len(kit_items)} child kit items for product number {product_number}.")
-        return kit_items
-
-    def get_kit_items_for_product_number_recursively(self, product_number: str) -> List[dict]:
-        """Finds all kit items for a product number recursively(i.e. for all kit parts). Retruns
-            a dictionary list for all items. Each dictionary contains the kit_part_number and kit_part_quantity."""
-
-        kit_items = self.get_kit_items_for_product_number(product_number)
-
-        # TODO: Change this to multiply the quantity of the kit part by the quantity of the next kit part.
-        # TODO: Check if this works as expected.
-
-        kit_item_list = []
-        for kit_item in kit_items:
-            # kit_item_list.append(kit_item)
-            kit_part_number = kit_item['kit_part_number']
-            # kit_part_quantity = kit_item['kit_part_quantity']
-            kit_data = self.get_kit_items_for_product_number_recursively(kit_part_number)
-
-            if not kit_data:
-                kit_item_list.append(kit_item)
-                continue
-
-            kit_item_list.extend(kit_data)
-        
-        return kit_item_list
+        return data
     
     def get_product_data_from_number(self, product_number: str) -> dict:
         """Gets product data for a product number. Returns a dictionary with the product number, description, and unit price. Returns None if no product is found."""
         
-        logger.debug(f"[FISHBOWL] Searching for product data for product number {product_number}.")
         values = {
             'product_number': product_number
         }
 
-        cursor = self.__get_cursor()
+        cursor = self.get_cursor()
         cursor.execute("""
-            SELECT product.num AS product_number,
+            SELECT product.num AS number,
                 product.description AS description,
                 product.price AS unit_price_dollars,
                 uom.code AS uom
@@ -162,7 +130,5 @@ class FishbowlDatabaseConnection(Database):
         product_data = cursor.fetchone()
         cursor.close()
         if not product_data:
-            logger.debug(f"[FISHBOWL] No product data found for product number {product_number}.")
             return None
-        logger.debug(f"[FISHBOWL] Found product data for product number {product_number}.")
         return product_data

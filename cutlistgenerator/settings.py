@@ -5,7 +5,7 @@ from .error import InvalidSettingsFilePathError, InvalidSettingsFileError
 
 DEFULT_SETTINGS = {
     "General_Settings": {
-        "logging_level": "INFO",
+        "logging_level": "DEBUG",
         "database_setup": False
     },
     "Fishbowl_MySQL":

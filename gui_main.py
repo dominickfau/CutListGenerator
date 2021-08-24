@@ -102,7 +102,7 @@ class Application(QtWidgets.QMainWindow):
         # self.ui.actionAbout.triggered.connect(self.show_about_dialog)
 
         # Fishbowl
-        self.ui.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
+        self.ui.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.test)
 
         # Cut Job
         self.ui.action_cut_job_Create_Blank.triggered.connect(lambda: self.create_cut_job())
@@ -149,13 +149,18 @@ class Application(QtWidgets.QMainWindow):
             cutlistgenerator.program_settings.set_database_setup(True)
             logger.info("[DATABASE] Database setup complete.")
 
-        auto_update_fishbowl_so_data = SystemProperty.find_by_name(self.cut_list_generator_database, "fishbowl_auto_update_sales_orders").value
-        if auto_update_fishbowl_so_data:
-            logger.info("[AUTO UPDATE] Auto updating sales order data from Fishbowl.")
-            self.thread_get_current_fb_data()
+        # BUG: There is an issue with this where the thread is loosing the connection to the database.
+        # auto_update_fishbowl_so_data = SystemProperty.find_by_name(self.cut_list_generator_database, "fishbowl_auto_update_sales_orders").value
+        # if auto_update_fishbowl_so_data:
+        #     logger.info("[AUTO UPDATE] Auto updating sales order data from Fishbowl.")
+        #     self.thread_get_current_fb_data()
         
         self.date_formate = SystemProperty.find_by_name(database_connection=self.cut_list_generator_database, name="date_formate").value
         self.load_so_table_data()
+    
+    def test(self):
+        utilities.update_sales_order_data_from_fishbowl(cutlistgenerator.program_settings.get_fishbowl_settings()['auth'],
+                                                        self.cut_list_generator_database)
 
     def get_so_search_data(self):
         include_finished = self.ui.so_search_include_finished_check_box.isChecked()
@@ -306,16 +311,6 @@ class Application(QtWidgets.QMainWindow):
         # TODO: Move this to a utility function.
         logger.debug("[TABLE] Clearing table.")
         tableWidget.setRowCount(0)
-    
-    def get_max_width_for_column(self, data: dict, column_key: str) -> int:
-        """Returns the maximum width for a given column."""
-        # TODO: Move this to a utility function.
-        max_width = 0
-        for row in data:
-            value = str(row[column_key])
-            if len(value) > max_width:
-                max_width = len(value)
-        return max_width
 
     def load_so_table_data(self):
         # TODO: Move this to a thread.
@@ -329,6 +324,8 @@ class Application(QtWidgets.QMainWindow):
         table_data = self.cut_list_generator_database.get_sales_order_table_data(search_data)
         self.ui.sales_order_table_widget.setRowCount(len(table_data))
         logger.debug(f"[SEARCH] Found {len(table_data)} rows of data.")
+
+        self.headers = utilities.get_max_column_widths(table_data, self.headers)
 
         for row_index, row in enumerate(table_data):
             is_child_item = row.pop('is_child_item')
@@ -380,7 +377,12 @@ class Application(QtWidgets.QMainWindow):
     def thread_get_current_fb_data(self):
         logger.info("[TREAD] Starting thread to get current sales order data from Fishbowl.")
         self.ui.actionGet_Sales_Order_Data.setEnabled(False)
-        worker = Worker(fn=self.get_current_fb_data, fishbowl_database=self.fishbowl_database, cut_list_database=self.cut_list_generator_database)
+
+        worker = Worker(fn=self.get_current_fb_data,
+                        fishbowl_database_connection_parameters=cutlistgenerator.program_settings.get_fishbowl_settings()['auth'],
+                        cut_list_database=self.cut_list_generator_database
+                        )
+
         worker.signals.finished.connect(lambda: self.ui.actionGet_Sales_Order_Data.setEnabled(True))
         worker.signals.result.connect(self.show_fishbowl_update_finished_message_box)
         worker.signals.finished.connect(self.reset_progress_bar)
@@ -390,10 +392,10 @@ class Application(QtWidgets.QMainWindow):
         self.threadpool.start(worker)
     
     @staticmethod
-    def get_current_fb_data(fishbowl_database, cut_list_database, progress_signal):
+    def get_current_fb_data(fishbowl_database_connection_parameters, cut_list_database, progress_signal):
         # TODO: Rework this to enable pySignals to be used.
         start_time = datetime.datetime.now()
-        total_rows, rows_inserted = utilities.update_sales_order_data_from_fishbowl(fishbowl_database, cut_list_database, progress_signal)
+        total_rows, rows_inserted = utilities.update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameters, cut_list_database, progress_signal)
         end_time = datetime.datetime.now()
         time_delta = end_time - start_time
         logger.info(f"[EXECUTION TIME]: {time_delta.total_seconds() *1000} ms")
