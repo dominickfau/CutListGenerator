@@ -160,7 +160,7 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
 
         logger.debug(f"[NEXT SALES ORDER ITEM] Processing row {index} of {total_rows}.")
         so_number = row['so_number']
-        customer_name = row['customer_name']
+        customer_name = convert_customer_name(cut_list_database, row['customer_name'])
 
         logger.debug(f"On Fishbowl sales order {so_number}.")
         if progress_data_signal:
@@ -382,3 +382,15 @@ def get_max_column_widths(table_data: List[dict], table_headers: dict) -> int:
                 if cell_legnth > max_column_widths[column_name]['width']:
                     max_column_widths[column_name]['width'] = cell_legnth
     return max_column_widths
+
+def convert_customer_name(database_connection: CutListDatabase, customer_name: str) -> str:
+    """Converts the customer name."""
+    values = {
+        'customer_name': customer_name
+    }
+    cursor = database_connection.get_cursor()
+    cursor.execute("SELECT * FROM customer_name_conversion WHERE from_ = %(customer_name)s", values)
+    result = cursor.fetchone()
+    if not result:
+        return customer_name
+    return result['to_']

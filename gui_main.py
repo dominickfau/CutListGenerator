@@ -467,6 +467,7 @@ class Application(QtWidgets.QMainWindow):
         worker.signals.finished.connect(lambda: self.ui.actionGet_Sales_Order_Data.setEnabled(True))
         worker.signals.result.connect(self.show_fishbowl_update_finished_message_box)
         worker.signals.finished.connect(self.reset_progress_bar)
+        worker.signals.finished.connect(self.load_so_table_data)
         worker.signals.progress.connect(self.update_progess_bar_value)
         worker.signals.progress_data.connect(self.set_progress_bar_text)
         self.progressBar.show()
