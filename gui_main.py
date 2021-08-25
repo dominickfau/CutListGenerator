@@ -2,6 +2,7 @@ from cutlistgenerator.appdataclasses.salesorder import SalesOrder, SalesOrderIte
 from cutlistgenerator.appdataclasses import product
 from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 import sys, os, traceback, datetime, inspect
+from typing import List
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMessageBox, QProgressBar, QPushButton
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSlot, pyqtSignal, QObject, Qt
@@ -29,7 +30,7 @@ from cutlistgenerator.appdataclasses.product import Product
 
 DEFAULT_SETTINGS_FILE_NAME = "settings.json"
 PROGRAM_NAME = "Cut List Generator"
-__version__ = "0.1.0"
+__version__ = "0.1.5"
 
 # Create settings file if it doesn't exist
 if not Settings.validate_file_path(DEFAULT_SETTINGS_FILE_NAME):
@@ -145,7 +146,7 @@ class Application(QtWidgets.QMainWindow):
                                                                                                      parent=self)))
 
         # Push buttons
-        self.ui.so_search_push_button.clicked.connect(self.load_so_table_data)
+        self.ui.so_search_push_button.clicked.connect(self.thread_get_so_table_data)
         self.ui.so_view_push_button.clicked.connect(self.on_view_button_clicked)
         self.ui.sales_order_table_widget.doubleClicked.connect(self.on_so_table_row_double_clicked)
 
@@ -174,7 +175,6 @@ class Application(QtWidgets.QMainWindow):
         #     self.thread_get_current_fb_data()
         
         self.date_formate = SystemProperty.find_by_name(database_connection=self.cut_list_generator_database, name="date_formate").value
-        self.load_so_table_data()
 
     def add_to_exclude_list(self):
         """Finds the selected row in the sales order table and adds it to the exclude list."""
@@ -238,7 +238,7 @@ class Application(QtWidgets.QMainWindow):
             # Remove all items from all sales orders.
             logger.warning(f"Removing all sales order items for {product_number}.")
             SalesOrder.remove_all_sales_order_items_for_product(database_connection=self.cut_list_generator_database, product=product)
-            self.load_so_table_data()
+            self.thread_get_so_table_data()
 
     def get_so_search_data(self):
         include_finished = self.ui.so_search_include_finished_check_box.isChecked()
@@ -369,7 +369,7 @@ class Application(QtWidgets.QMainWindow):
                     sales_order_item.save()
                 else:
                     logger.info(f"Sales order item ID {sales_order_item.id} is not fully cut.")
-        self.load_so_table_data()
+        self.thread_get_so_table_data()
 
         
     def create_cut_job(self, product: Product = None, linked_so_item: SalesOrderItem = None):
@@ -383,31 +383,58 @@ class Application(QtWidgets.QMainWindow):
         if dialog.exec():
             dialog.cut_job.save()
             logger.info(f"[CUT JOB] Cut job data saved. Job ID: {dialog.cut_job.id}")
-        self.load_so_table_data()
+        self.thread_get_so_table_data()
 
     def clear_table(self, tableWidget):
         # TODO: Move this to a utility function.
         logger.debug("[TABLE] Clearing table.")
         tableWidget.setRowCount(0)
 
-    def load_so_table_data(self):
-        # TODO: Move this to a thread.
-        logger.debug("[LOAD TABLE] Loading SO data into table.")
-        search_data = self.get_so_search_data()
-        self.clear_table(self.ui.sales_order_table_widget)
-
+    def get_so_table_data(self, progress_signal=None, progress_data_signal=None) -> List[dict]:
         # TODO: Remove this when we have a better way of getting the data.
         # FIXME: Check if items that are not fully cut are being loaded.
         # TODO: Check that Include Finished checkbox is working.
-        table_data = self.cut_list_generator_database.get_sales_order_table_data(search_data)
+        table_data = []
+        search_data = self.get_so_search_data()
+        _table_data = self.cut_list_generator_database.get_sales_order_table_data(search_data)
+        logger.debug(f"[SEARCH] Found {len(_table_data)} rows of data.")
+
+        self.headers = utilities.get_max_column_widths(_table_data, self.headers)
+
+        if progress_data_signal:
+            progress_data_signal.emit("Loading SO data into table...")
+
+        for row_index, row in enumerate(_table_data, 1):
+            if progress_signal:
+                progress_signal.emit(int(row_index / len(_table_data) * 100))
+
+            is_child_item = row.pop('is_child_item')
+            sales_order_item = SalesOrderItem.from_id(self.cut_list_generator_database, row['Id'])
+
+            data = {
+                'is_child_item': is_child_item,
+                'sales_order_item': sales_order_item,
+                'row': row
+            }
+            table_data.append(data)
+        return table_data
+    
+    def load_so_table_data(self, table_data: list):
+        logger.debug("[LOAD TABLE] Loading SO data into table.")
+        self.clear_table(self.ui.sales_order_table_widget)
+
+        # FIXME: Check if items that are not fully cut are being loaded.
+        # TODO: Check that Include Finished checkbox is working.
         self.ui.sales_order_table_widget.setRowCount(len(table_data))
         logger.debug(f"[SEARCH] Found {len(table_data)} rows of data.")
 
         self.headers = utilities.get_max_column_widths(table_data, self.headers)
 
-        for row_index, row in enumerate(table_data):
+        for row_index, row in enumerate(table_data, 1):
             is_child_item = row.pop('is_child_item')
-            sales_order_item = SalesOrderItem.from_id(self.cut_list_generator_database, row['Id'])
+            sales_order_item = row.pop('sales_order_item')
+            table_row = row.pop('row')
+
             qty_left_to_cut = int(sales_order_item.qty_left_to_cut)
             qty_scheduled_to_cut = int(sales_order_item.qty_scheduled_to_cut)
 
@@ -421,9 +448,8 @@ class Application(QtWidgets.QMainWindow):
             self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(qty_scheduled_to_cut)))
             self.ui.sales_order_table_widget.setColumnWidth(column_index, width)
 
-            for key in row:
-                # Id, Due Date, Customer Name, SO Number, Product Number, Description, Qty Left To Ship, Line Number, Fully Cut, Parent Number, Parent Description
-                value = row[key]
+            for key in table_row:
+                value = table_row[key]
                 if value == None:
                     value = ''
                 if key == 'Qty Left To Ship':
@@ -467,7 +493,20 @@ class Application(QtWidgets.QMainWindow):
         worker.signals.finished.connect(lambda: self.ui.actionGet_Sales_Order_Data.setEnabled(True))
         worker.signals.result.connect(self.show_fishbowl_update_finished_message_box)
         worker.signals.finished.connect(self.reset_progress_bar)
-        worker.signals.finished.connect(self.load_so_table_data)
+        worker.signals.finished.connect(self.thread_get_so_table_data)
+        worker.signals.progress.connect(self.update_progess_bar_value)
+        worker.signals.progress_data.connect(self.set_progress_bar_text)
+        self.progressBar.show()
+        self.progressBar.setValue(0)
+        self.threadpool.start(worker)
+    
+    def thread_get_so_table_data(self):
+        logger.info("[TREAD] Starting thread to reload SO data into table.")
+
+        worker = Worker(fn=self.get_so_table_data)
+
+        worker.signals.finished.connect(self.reset_progress_bar)
+        worker.signals.result.connect(self.load_so_table_data)
         worker.signals.progress.connect(self.update_progess_bar_value)
         worker.signals.progress_data.connect(self.set_progress_bar_text)
         self.progressBar.show()
@@ -478,20 +517,29 @@ class Application(QtWidgets.QMainWindow):
     def get_current_fb_data(fishbowl_database_connection_parameters, cut_list_database, progress_signal=None, progress_data_signal=None):
         # TODO: Rework this to enable pySignals to be used.
         start_time = datetime.datetime.now()
-        total_rows, rows_inserted = utilities.update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameters, cut_list_database, progress_signal, progress_data_signal)
+        total_rows, rows_inserted, rows_updated, total_skipped = utilities.update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameters, cut_list_database, progress_signal, progress_data_signal)
         end_time = datetime.datetime.now()
         time_delta = end_time - start_time
-        logger.info(f"[EXECUTION TIME]: {time_delta.total_seconds() *1000} ms")
-        return total_rows, rows_inserted
+        logger.info(f"[EXECUTION TIME]: {time_delta.total_seconds()} seconds.")
+        return total_rows, rows_inserted, rows_updated, total_skipped
 
     def show_fishbowl_update_finished_message_box(self, result):
+        total_rows, rows_inserted, rows_updated, total_skipped = result
         msg = QMessageBox()
         msg.setWindowTitle("Fishbowl")
         msg.setIcon(QMessageBox.Information)
         msg.setText(f"Fishbowl data update complete.")
-        msg.setInformativeText(f"Total rows available: {result[0]}\nRows inserted: {result[1]}")
+        lines = [
+            f"Total Fishbowl SO items open: {total_rows}",
+            f"SO items updated: {rows_updated}",
+            f"Products skipped: {total_skipped}",
+            f"SO items inserted: {rows_inserted}",
+            f"Items ignored: {total_rows - rows_inserted - total_skipped}",
+            ]
+        msg.setInformativeText("\n".join(lines))
 
         msg.setStandardButtons(QMessageBox.Ok)
+        msg.setWindowModality(Qt.NonModal)
         msg.exec()
 
 
@@ -502,6 +550,7 @@ def main():
         app = QApplication(sys.argv)
         main_window = Application()
         main_window.showMaximized()
+        main_window.thread_get_so_table_data()
         app.exec_()
 
         main_window.fishbowl_database.disconnect()
