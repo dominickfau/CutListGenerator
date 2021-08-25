@@ -130,6 +130,17 @@ CREATE TABLE `cut_job` (
   CONSTRAINT `FK_herakjhgjhwerjdfvkjejhfg` FOREIGN KEY (`product_id`) REFERENCES `product` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE `customer_name_conversion` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `from_` varchar(100) NOT NULL,
+  `to_` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id_UNIQUE` (`id`),
+  UNIQUE KEY `from__UNIQUE` (`from_`),
+  UNIQUE KEY `to__UNIQUE` (`to_`),
+  KEY `IDX_from_` (`from_`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 
 -- TRIGGERS
 DROP TRIGGER IF EXISTS `sales_order_item_BEFORE_INSERT`;
