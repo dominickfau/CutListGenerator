@@ -141,6 +141,11 @@ CREATE TABLE `customer_name_conversion` (
   KEY `IDX_from_` (`from_`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+CREATE TABLE `exclude_product_number` (
+  `part_number` varchar(45) NOT NULL,
+  PRIMARY KEY (`part_number`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='This table represents all product numbers to skip, when importing SO data from Fishbowl.';
+
 
 -- TRIGGERS
 DROP TRIGGER IF EXISTS `sales_order_item_BEFORE_INSERT`;
