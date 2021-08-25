@@ -240,3 +240,8 @@ class CutListDatabase(Database):
     def get_sales_orders_containing_product(self, product) -> List[dict]:
         """Get all sales orders containing a product. Returns empty list if not found. Returns a list of dicts with the following key: sales_order_id"""
         pass
+
+    @abstractmethod
+    def get_exclude_product_numbers_from_import(self) -> List[str]:
+        """Get a list of product numbers to exclude from import."""
+        pass

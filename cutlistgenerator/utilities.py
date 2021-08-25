@@ -78,7 +78,6 @@ def add_child_product_recursively(fishbowl_database_connection: FishbowlDatabase
     global rows_updated
 
     child_product = Product.from_number(cut_list_database, child_product_number)
-    # TODO: Add ability to check if this child product should be added to the sales order.
     if child_product:
         values = {
             'product': child_product,
@@ -142,8 +141,17 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
     rows_inserted = 0
     rows_updated = 0
     total_rows = len(fishbowl_data)
-    products_to_exclude = SystemProperty.find_by_name(database_connection=cut_list_database, name="exclude_product_numbers_from_import").value
-    logger.info(f"[SYSTEM PROPERTY] products_to_exclude = {products_to_exclude}")
+    products_to_exclude = cut_list_database.get_exclude_product_numbers_from_import()
+    string = "["
+    limit_per_line = 10
+    for index, product in enumerate(products_to_exclude, 1):
+        string += '"' + product.strip() + '", '
+        if index % limit_per_line == 0:
+            string = string[:-1]
+            string += "\n\t"
+    string = string[:-2] + "]"
+    
+    logger.warning(f"[EXCLUDED] The following products will be excluded from the import:\n\t{string}")
 
     if len(fishbowl_data) == 0:
         logger.info("No open sales orders found in fishbowl database.")
@@ -257,12 +265,12 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
             rows_updated += 1
 
         logger.debug("Finished processing row.")
-        logger.info(f"Row processing time: {(datetime.datetime.now() - row_processing_time_start).total_seconds()} seconds.")
+        logger.info(f"[EXECUTION TIME] Row processing time: {(datetime.datetime.now() - row_processing_time_start).total_seconds()} seconds.")
         fishbowl_sales_orders[so_number] = sales_order
 
     logger.info("Finished processing all open sales orders in fishbowl.")
     logger.info("Saving sales order objects to the database.")
-    logger.info(f"Total row processing time: {(datetime.datetime.now() - update_time_start).total_seconds()} seconds.")
+    logger.info(f"[EXECUTION TIME] Total row processing time: {(datetime.datetime.now() - update_time_start).total_seconds()} seconds.")
 
     save_start_time = datetime.datetime.now()
 
@@ -281,6 +289,7 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
             if item.product.number in products_to_exclude:
                 logger.warning(f"Product number: {item.product.number} is in the exclude_product_numbers_from_import list. Removing from the sales order.")
                 total_skipped += 1
+                rows_inserted -= 1
                 continue
             item.save()
         if progress_data_signal:
@@ -291,12 +300,12 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
         logger.debug(f"Saving sales order {so_number}.")
 
     logger.info("Finished saving all sales orders in fishbowl.")
-    logger.warning(f"Total items skipped:{total_skipped}.")
-    logger.info(f"Total save time: {(datetime.datetime.now() - save_start_time).total_seconds()} seconds.")
+    logger.warning(f"Total items skipped: {total_skipped}.")
+    logger.info(f"[EXECUTION TIME] Total save time: {(datetime.datetime.now() - save_start_time).total_seconds()} seconds.")
 
     logger.info(f"{rows_inserted} rows inserted from a total of {total_rows} rows.")
-    logger.info(f"Total run time: {(datetime.datetime.now() - update_time_start).total_seconds()} seconds.")
-    return total_rows, rows_inserted
+    logger.info(f"[EXECUTION TIME] Total run time: {(datetime.datetime.now() - update_time_start).total_seconds()} seconds.")
+    return total_rows, rows_inserted, rows_updated, total_skipped
 
 
 def create_default_system_properties(database_connection: CutListDatabase):
@@ -336,13 +345,6 @@ def create_default_system_properties(database_connection: CutListDatabase):
         SystemProperty(database_connection=database_connection,
                         name="date_formate",
                         value="%m-%d-%Y %I:%M %p",
-                        visible=True).save()
-    
-    if not SystemProperty.find_by_name(database_connection=database_connection, name="exclude_product_numbers_from_import"):
-        logger.info("[SYSTEM PROPERTY] Adding default system property 'exclude_product_numbers_from_import'.")
-        SystemProperty(database_connection=database_connection,
-                        name="exclude_product_numbers_from_import",
-                        value=["test", "test2"],
                         visible=True).save()
     
     logger.info("[SYSTEM PROPERTY] Finished. All system properties should now exist.")

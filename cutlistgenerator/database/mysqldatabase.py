@@ -875,3 +875,10 @@ class MySQLDatabaseConnection(CutListDatabase):
         sales_order_table_data = cursor.fetchall()
         cursor.close()
         return sales_order_table_data
+    
+    def get_exclude_product_numbers_from_import(self) -> List[str]:
+        cursor = self.get_cursor()
+        cursor.execute("SELECT number FROM exclude_product_number;")
+        data = cursor.fetchall()
+        cursor.close()
+        return [row['number'] for row in data]
