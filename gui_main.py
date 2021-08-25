@@ -430,7 +430,7 @@ class Application(QtWidgets.QMainWindow):
 
         self.headers = utilities.get_max_column_widths(table_data, self.headers)
 
-        for row_index, row in enumerate(table_data, 1):
+        for row_index, row in enumerate(table_data):
             is_child_item = row.pop('is_child_item')
             sales_order_item = row.pop('sales_order_item')
             table_row = row.pop('row')
