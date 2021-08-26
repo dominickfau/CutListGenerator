@@ -127,8 +127,6 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
     logger.info("Updating sales order data from fishbowl.")
     add_parent_products = SystemProperty.find_by_name(database_connection=cut_list_database, name="add_parent_products_to_sales_orders").value
     logger.debug(f"[SYSTEM PROPERTY] add_parent_products_to_sales_orders = {add_parent_products}")
-    products_to_skip = SystemProperty.find_by_name(database_connection=cut_list_database, name="exclude_sales_order_products_starting_with").value
-    logger.debug(f"[SYSTEM PROPERTY] products_to_skip = {products_to_skip}")
 
     fishbowl_data = fishbowl_database.get_all_open_sales_order_items()
 
@@ -211,19 +209,6 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
         else:
             logger.debug("Product found in database. Updating it.")
 
-        # # Check if the product is in the exclude list.
-        # # TODO: Find a better way to do this?
-        # to_skip = False
-        # for item in products_to_skip:
-        #     if product.number.startswith(item):
-        #         logger.info(f"Skipping product number: {product.number}")
-        #         to_skip = True
-        #         break
-        
-        # # If the product is in the exclude list, skip it.
-        # if to_skip:
-        #     continue
-
         line_number = row['line_number']
         due_date = row['due_date']
         qty_to_fulfill = row['qty_to_fulfill']
@@ -284,7 +269,7 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
 
         for item in sales_order.order_items:
             if item.product.number in products_to_exclude:
-                logger.warning(f"Product number: {item.product.number} is in the exclude_product_numbers_from_import list. Removing from the sales order.")
+                logger.warning(f"Product number: {item.product.number} is in the exclusion list. Removing from the sales order.")
                 total_skipped += 1
                 rows_inserted -= 1
                 continue
@@ -328,13 +313,6 @@ def create_default_system_properties(database_connection: CutListDatabase):
         SystemProperty(database_connection=database_connection,
                         name="add_parent_products_to_sales_orders",
                         value=False,
-                        visible=True).save()
-    
-    if not SystemProperty.find_by_name(database_connection=database_connection, name="exclude_sales_order_products_starting_with"):
-        logger.info("[SYSTEM PROPERTY] Adding default system property 'exclude_sales_order_products_starting_with'.")
-        SystemProperty(database_connection=database_connection,
-                        name="exclude_sales_order_products_starting_with",
-                        value=["BC-"],
                         visible=True).save()
     
     if not SystemProperty.find_by_name(database_connection=database_connection, name="date_formate"):
