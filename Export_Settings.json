@@ -7,7 +7,7 @@
   },
   {
    "optionDest": "filenames",
-   "value": "C:/Users/Nick Gamming/Documents/Python/Cut_List/gui_main.py"
+   "value": "C:/Users/Nick Gamming/Documents/Python/Cut_List/Cut_List_Generator.py"
   },
   {
    "optionDest": "onefile",
@@ -63,7 +63,7 @@
   },
   {
    "optionDest": "datas",
-   "value": "C:/Users/Nick Gamming/Documents/Python/Cut_List/sql/SCHEMA_CREATE_cutlistgenerator.sql;sql/"
+   "value": "C:/Users/Nick Gamming/Documents/Python/Cut_List/Files For New Release/SCHEMA_CREATE_cutlistgenerator.sql;sql/"
   }
  ],
  "nonPyinstallerOptions": {
