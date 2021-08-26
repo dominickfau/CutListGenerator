@@ -20,7 +20,7 @@ from cutlistgenerator.ui.wirecuttersearchdialog import WireCutterSearchDialog
 
 
 from cutlistgenerator.ui.customwidgets.resizablemessagebox import ResizableMessageBox
-from cutlistgenerator.settings import Settings
+
 from cutlistgenerator.database.mysqldatabase import MySQLDatabaseConnection
 from cutlistgenerator.database.fishbowldatabase import FishbowlDatabaseConnection
 from cutlistgenerator import utilities
@@ -29,18 +29,7 @@ from cutlistgenerator.appdataclasses.cutjob import CutJob
 from cutlistgenerator.appdataclasses.product import Product
 
 
-DEFAULT_SETTINGS_FILE_NAME = "settings.json"
-PROGRAM_NAME = "Cut List Generator"
-__version__ = "0.1.5"
 
-# Create settings file if it doesn't exist
-if not Settings.validate_file_path(DEFAULT_SETTINGS_FILE_NAME):
-    utilities.touch(DEFAULT_SETTINGS_FILE_NAME)
-    cutlistgenerator.program_settings.set_file_path(DEFAULT_SETTINGS_FILE_NAME)
-    cutlistgenerator.program_settings.save()
-else:
-    cutlistgenerator.program_settings.set_file_path(DEFAULT_SETTINGS_FILE_NAME)
-    cutlistgenerator.program_settings.load()
 
 logger = FileLogger(__name__)
 
@@ -77,23 +66,20 @@ class WorkerSignals(QObject):
     result = pyqtSignal(object)
 
 
-class Application(QtWidgets.QMainWindow):
-    def __init__(self):
-        super(Application, self).__init__()
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
+class MainWindow(Ui_MainWindow, QtWidgets.QMainWindow):
+    def __init__(self, parent=None):
+        super(Ui_MainWindow, self).__init__(parent)
+        self.setupUi(self)
 
         self.updating_table = False
         self.updating_fishbowl_data = False
 
-        self.setWindowTitle(f"{PROGRAM_NAME} v{__version__}")
-
         self.threadpool = QThreadPool()
         self.progressBar = QProgressBar()
         self.progressBar.setAlignment(Qt.AlignCenter)
-        self.headers = utilities.get_table_headers(self.ui.sales_order_table_widget)
+        self.headers = utilities.get_table_headers(self.sales_order_table_widget)
 
-        self.ui.statusbar.addPermanentWidget(self.progressBar)
+        self.statusbar.addPermanentWidget(self.progressBar)
 
         # This is simply to show the bar
         self.progressBar.setGeometry(30, 40, 200, 25)
@@ -104,59 +90,59 @@ class Application(QtWidgets.QMainWindow):
 
         # File
         # TODO: Add file menu functions.
-        # self.ui.actionSettings.triggered.connect(self.show_settings_dialog)
-        # self.ui.actionSystem_Properties.triggered.connect(self.show_system_properties_dialog)
-        # self.ui.actionHelp.triggered.connect(self.show_help_dialog)
-        # self.ui.actionAbout.triggered.connect(self.show_about_dialog)
+        # self.actionSettings.triggered.connect(self.show_settings_dialog)
+        # self.actionSystem_Properties.triggered.connect(self.show_system_properties_dialog)
+        # self.actionHelp.triggered.connect(self.show_help_dialog)
+        # self.actionAbout.triggered.connect(self.show_about_dialog)
 
         # Edit
-        self.ui.actionAdd_To_Exclude_List.triggered.connect(self.add_to_exclude_list)
+        self.actionAdd_To_Exclude_List.triggered.connect(self.add_to_exclude_list)
 
         # Fishbowl
-        self.ui.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
+        self.action_fishbowl_Get_Sales_Order_Data.triggered.connect(self.thread_get_current_fb_data)
 
         # Cut Job
-        self.ui.action_cut_job_Create_Blank.triggered.connect(lambda: self.create_cut_job())
-        self.ui.action_cut_job_Show_All_Open.triggered.connect(lambda: self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database,parent=self))
+        self.action_cut_job_Create_Blank.triggered.connect(lambda: self.create_cut_job())
+        self.action_cut_job_Show_All_Open.triggered.connect(lambda: self.show_cut_job_search_dialog(cut_list_generator_database=self.cut_list_generator_database,parent=self))
 
         # Reports - Export
         # TODO: Add export report functionality
-        # self.ui.actionExport_Cut_Job_Summary.triggered.connect(self.export_cut_job_summary)
-        # self.ui.actionExport_Cut_Jobs_List.triggered.connect(self.export_cut_jobs_list)
-        # self.ui.actionExport_Termination_Job_List.triggered.connect(self.export_termination_jobs_list)
-        # self.ui.actionExport_Splice_Jobs_List.triggered.connect(self.export_splice_jobs_list)
-        # self.ui.actionExport_Product_List.triggered.connect(self.export_product_list)
-        # self.ui.actionExport_Wire_Cutter_List.triggered.connect(self.export_wire_cutter_list)
-        # self.ui.actionExport_Wire_Cutter_Options_List.triggered.connect(self.export_wire_cutter_options_list)
+        # self.actionExport_Cut_Job_Summary.triggered.connect(self.export_cut_job_summary)
+        # self.actionExport_Cut_Jobs_List.triggered.connect(self.export_cut_jobs_list)
+        # self.actionExport_Termination_Job_List.triggered.connect(self.export_termination_jobs_list)
+        # self.actionExport_Splice_Jobs_List.triggered.connect(self.export_splice_jobs_list)
+        # self.actionExport_Product_List.triggered.connect(self.export_product_list)
+        # self.actionExport_Wire_Cutter_List.triggered.connect(self.export_wire_cutter_list)
+        # self.actionExport_Wire_Cutter_Options_List.triggered.connect(self.export_wire_cutter_options_list)
 
         # General Context Menu
-        self.addAction(self.ui.action_fishbowl_Get_Sales_Order_Data)
-        self.addAction(self.ui.action_cut_job_Show_All_Open)
-        self.addAction(self.ui.action_cut_job_Create_Blank)
+        self.addAction(self.action_fishbowl_Get_Sales_Order_Data)
+        self.addAction(self.action_cut_job_Show_All_Open)
+        self.addAction(self.action_cut_job_Create_Blank)
 
 
         # Table Context Menu Items
         # TODO: Rework last 2 items.
-        self.ui.sales_order_table_widget.addAction(self.ui.actionAdd_To_Exclude_List)
-        self.ui.sales_order_table_widget.addAction(self.ui.action_cut_job_Create_Blank)
-        self.ui.sales_order_table_widget.addAction(self.ui.action_cut_job_Show_All_Open)
+        self.sales_order_table_widget.addAction(self.actionAdd_To_Exclude_List)
+        self.sales_order_table_widget.addAction(self.action_cut_job_Create_Blank)
+        self.sales_order_table_widget.addAction(self.action_cut_job_Show_All_Open)
 
         # Wire Cutter
-        self.ui.actionWire_Cutter_New.triggered.connect(lambda: self.show_wire_cutter_dialog(cut_list_generator_database=self.cut_list_generator_database,
+        self.actionWire_Cutter_New.triggered.connect(lambda: self.show_wire_cutter_dialog(cut_list_generator_database=self.cut_list_generator_database,
                                                                                              parent=self))
-        self.ui.actionWire_Cutter_Edit.triggered.connect(lambda: self.show_wire_cutter_dialog(cut_list_generator_database=self.cut_list_generator_database,
+        self.actionWire_Cutter_Edit.triggered.connect(lambda: self.show_wire_cutter_dialog(cut_list_generator_database=self.cut_list_generator_database,
                                                                                                 parent=self,
                                                                                                 wire_cutter=self.show_wire_cutter_search_dialog(cut_list_generator_database=self.cut_list_generator_database,
                                                                                                      parent=self)))
 
         # Push buttons
-        self.ui.so_search_push_button.clicked.connect(self.thread_get_so_table_data)
-        self.ui.so_view_push_button.clicked.connect(self.on_view_button_clicked)
-        self.ui.sales_order_table_widget.doubleClicked.connect(self.on_so_table_row_double_clicked)
+        self.so_search_push_button.clicked.connect(self.thread_get_so_table_data)
+        self.so_view_push_button.clicked.connect(self.on_view_button_clicked)
+        self.sales_order_table_widget.doubleClicked.connect(self.on_so_table_row_double_clicked)
 
         # This auto strips the text when the widget looses focus.
-        self.ui.so_search_product_number_line_edit.editingFinished.connect(lambda: self.ui.so_search_product_number_line_edit.setText(self.ui.so_search_product_number_line_edit.text().strip()))
-        self.ui.so_search_so_number_line_edit.editingFinished.connect(lambda: self.ui.so_search_so_number_line_edit.setText(self.ui.so_search_so_number_line_edit.text().strip()))
+        self.so_search_product_number_line_edit.editingFinished.connect(lambda: self.so_search_product_number_line_edit.setText(self.so_search_product_number_line_edit.text().strip()))
+        self.so_search_so_number_line_edit.editingFinished.connect(lambda: self.so_search_so_number_line_edit.setText(self.so_search_so_number_line_edit.text().strip()))
 
         self.fishbowl_database = FishbowlDatabaseConnection(connection_args=cutlistgenerator.program_settings.get_fishbowl_settings()['auth'])
         self.cut_list_generator_database = MySQLDatabaseConnection(connection_args=cutlistgenerator.program_settings.get_cutlist_settings()['auth'])
@@ -182,9 +168,9 @@ class Application(QtWidgets.QMainWindow):
 
     def add_to_exclude_list(self):
         """Finds the selected row in the sales order table and adds it to the exclude list."""
-        selected_row = self.ui.sales_order_table_widget.currentRow()
+        selected_row = self.sales_order_table_widget.currentRow()
         if selected_row != -1:
-            product_number = self.ui.sales_order_table_widget.item(selected_row, self.headers['Product Number']['index']).text()
+            product_number = self.sales_order_table_widget.item(selected_row, self.headers['Product Number']['index']).text()
             product = Product.from_number(self.cut_list_generator_database, product_number)
             if not product:
                 lines = "\n".join([str(line) for line in inspect.stack()])
@@ -245,9 +231,9 @@ class Application(QtWidgets.QMainWindow):
             self.thread_get_so_table_data()
 
     def get_so_search_data(self):
-        include_finished = self.ui.so_search_include_finished_check_box.isChecked()
-        product_number = self.ui.so_search_product_number_line_edit.text().strip()
-        so_number = self.ui.so_search_so_number_line_edit.text().strip()
+        include_finished = self.so_search_include_finished_check_box.isChecked()
+        product_number = self.so_search_product_number_line_edit.text().strip()
+        so_number = self.so_search_so_number_line_edit.text().strip()
 
         if include_finished:
             include_finished = "%"
@@ -291,7 +277,7 @@ class Application(QtWidgets.QMainWindow):
 
     def on_view_button_clicked(self):
         """Called when the view button is clicked."""
-        row_num = self.ui.sales_order_table_widget.currentRow()
+        row_num = self.sales_order_table_widget.currentRow()
         if row_num == -1:
             msg = QMessageBox()
             msg.setWindowTitle("Sales Order")
@@ -344,9 +330,9 @@ class Application(QtWidgets.QMainWindow):
         return dialog.wire_cutter
 
     def get_row_data_from_so_table(self, row_num: int) -> dict:
-        so_item_id = int(self.ui.sales_order_table_widget.item(row_num, self.headers['Id']['index']).text())
-        so_number = self.ui.sales_order_table_widget.item(row_num, self.headers['SO Number']['index']).text()
-        product_number = self.ui.sales_order_table_widget.item(row_num, self.headers['Product Number']['index']).text()
+        so_item_id = int(self.sales_order_table_widget.item(row_num, self.headers['Id']['index']).text())
+        so_number = self.sales_order_table_widget.item(row_num, self.headers['SO Number']['index']).text()
+        product_number = self.sales_order_table_widget.item(row_num, self.headers['Product Number']['index']).text()
         return {
             'so_item_id': so_item_id,
             'so_number': so_number,
@@ -429,8 +415,8 @@ class Application(QtWidgets.QMainWindow):
         total_rows = len(table_data)
         self.set_progress_bar_text("Loading SO data...")
         logger.debug(f"[LOAD TABLE] Loading {total_rows} rows of data.")
-        self.clear_table(self.ui.sales_order_table_widget)
-        self.ui.sales_order_table_widget.setRowCount(len(table_data))
+        self.clear_table(self.sales_order_table_widget)
+        self.sales_order_table_widget.setRowCount(len(table_data))
 
         self.headers = utilities.get_max_column_widths(table_data, self.headers)
 
@@ -445,13 +431,13 @@ class Application(QtWidgets.QMainWindow):
 
             column_index = self.headers['Qty Left To Cut']['index']
             width = self.headers['Qty Left To Cut']['width']
-            self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(qty_left_to_cut)))
-            self.ui.sales_order_table_widget.setColumnWidth(column_index, width)
+            self.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(qty_left_to_cut)))
+            self.sales_order_table_widget.setColumnWidth(column_index, width)
 
             column_index = self.headers['Qty Scheduled To Cut']['index']
             width = self.headers['Qty Scheduled To Cut']['width']
-            self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(qty_scheduled_to_cut)))
-            self.ui.sales_order_table_widget.setColumnWidth(column_index, width)
+            self.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(qty_scheduled_to_cut)))
+            self.sales_order_table_widget.setColumnWidth(column_index, width)
 
             for key in table_row:
                 value = table_row[key]
@@ -472,8 +458,8 @@ class Application(QtWidgets.QMainWindow):
                 width = self.headers[key]['width']
                 if key == "Description":
                     width = 200
-                self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(value)))
-                self.ui.sales_order_table_widget.setColumnWidth(column_index, width)
+                self.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(value)))
+                self.sales_order_table_widget.setColumnWidth(column_index, width)
         self.reset_progress_bar()
 
     def update_progess_bar_value(self, value):
@@ -497,7 +483,7 @@ class Application(QtWidgets.QMainWindow):
         self.updating_fishbowl_data = True
 
         logger.info("Starting thread to get current sales order data from Fishbowl.")
-        self.ui.action_fishbowl_Get_Sales_Order_Data.setEnabled(False)
+        self.action_fishbowl_Get_Sales_Order_Data.setEnabled(False)
 
         fishbowl_database = FishbowlDatabaseConnection(connection_args=cutlistgenerator.program_settings.get_fishbowl_settings()['auth'])
 
@@ -509,7 +495,7 @@ class Application(QtWidgets.QMainWindow):
 
         worker.signals.finished.connect(self.reset_progress_bar)
         worker.signals.finished.connect(self.thread_get_so_table_data)
-        worker.signals.finished.connect(lambda: self.ui.action_fishbowl_Get_Sales_Order_Data.setEnabled(True))
+        worker.signals.finished.connect(lambda: self.action_fishbowl_Get_Sales_Order_Data.setEnabled(True))
         worker.signals.finished.connect(lambda: logger.info("[FISHBOWL DATA] Finished retreiving data from Fishbowl."))
         worker.signals.finished.connect(lambda: fishbowl_database.disconnect())
         worker.signals.result.connect(lambda: set_updating_fishbowl_data(False))
@@ -546,12 +532,10 @@ class Application(QtWidgets.QMainWindow):
     
     @staticmethod
     def get_current_fb_data(fishbowl_database: FishbowlDatabaseConnection, cut_list_database: CutListDatabase, progress_signal=None, progress_data_signal=None):
-        # TODO: Rework this to enable pySignals to be used.
         start_time = datetime.datetime.now()
         total_rows, rows_inserted, rows_updated, total_skipped = utilities.update_sales_order_data_from_fishbowl(fishbowl_database, cut_list_database, progress_signal, progress_data_signal)
         end_time = datetime.datetime.now()
         time_delta = end_time - start_time
-        logger.info(f"[EXECUTION TIME]: {time_delta.total_seconds()} seconds.")
         return total_rows, rows_inserted, rows_updated, total_skipped
 
     def show_fishbowl_update_finished_message_box(self, result):
@@ -570,38 +554,5 @@ class Application(QtWidgets.QMainWindow):
         msg.setInformativeText("\n".join(lines))
 
         msg.setStandardButtons(QMessageBox.Ok)
-        msg.setWindowModality(Qt.NonModal)
+        msg.setWindowModality(Qt.NonModal) # This is needed to keep the message box from blocking other code from running.
         msg.exec()
-
-
-def main():
-    logger.info("[START] Starting application.")
-    logger.info(f"Program Version: {__version__}")
-    try:
-        app = QApplication(sys.argv)
-        main_window = Application()
-        main_window.showMaximized()
-        main_window.thread_get_so_table_data()
-        app.exec_()
-
-        main_window.fishbowl_database.disconnect()
-        main_window.cut_list_generator_database.disconnect()
-    except Exception as e:
-        logger.critical("Fatale exception occurred.", exc_info=True)
-        logger.critical("End of exception.")
-
-        msg = ResizableMessageBox()
-        msg.setIcon(QMessageBox.Critical)
-        msg.setText("Fatale exception occurred.")
-        msg.setInformativeText(f"Exception: {e}")
-        msg.setDetailedText(traceback.format_exc())
-        msg.setWindowTitle("Fatale Exception")
-        msg.setStandardButtons(QMessageBox.Ok)
-        msg.exec()
-
-    logger.info("[END] Closing application.")
-    exit()
-
-
-if __name__ == "__main__":
-    main()
