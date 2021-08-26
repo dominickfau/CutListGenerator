@@ -114,7 +114,7 @@ def add_child_product_recursively(fishbowl_database_connection: FishbowlDatabase
                                           new_child_product_number)
             total_rows += 1
 
-def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameters: dict,
+def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseConnection,
                                           cut_list_database: CutListDatabase,
                                           progress_signal = None,
                                           progress_data_signal = None):
@@ -129,9 +129,6 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
     logger.debug(f"[SYSTEM PROPERTY] add_parent_products_to_sales_orders = {add_parent_products}")
     products_to_skip = SystemProperty.find_by_name(database_connection=cut_list_database, name="exclude_sales_order_products_starting_with").value
     logger.debug(f"[SYSTEM PROPERTY] products_to_skip = {products_to_skip}")
-
-    logger.info("Connecting to fishbowl database.")
-    fishbowl_database = FishbowlDatabaseConnection(fishbowl_database_connection_parameters)
 
     fishbowl_data = fishbowl_database.get_all_open_sales_order_items()
 
@@ -265,7 +262,7 @@ def update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameter
             rows_updated += 1
 
         logger.debug("Finished processing row.")
-        logger.info(f"[EXECUTION TIME] Row processing time: {(datetime.datetime.now() - row_processing_time_start).total_seconds()} seconds.")
+        logger.debug(f"[EXECUTION TIME] Row processing time: {(datetime.datetime.now() - row_processing_time_start).total_seconds()} seconds.")
         fishbowl_sales_orders[so_number] = sales_order
 
     logger.info("Finished processing all open sales orders in fishbowl.")

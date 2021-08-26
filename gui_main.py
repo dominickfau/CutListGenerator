@@ -1,3 +1,4 @@
+from cutlistgenerator.database.cutlistdatabase import CutListDatabase
 from cutlistgenerator.appdataclasses.salesorder import SalesOrder, SalesOrderItem
 from cutlistgenerator.appdataclasses import product
 from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
@@ -81,6 +82,9 @@ class Application(QtWidgets.QMainWindow):
         super(Application, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        self.updating_table = False
+        self.updating_fishbowl_data = False
 
         self.setWindowTitle(f"{PROGRAM_NAME} v{__version__}")
 
@@ -259,8 +263,6 @@ class Application(QtWidgets.QMainWindow):
             so_number = "%"
         else:
             so_number = f"%{so_number}%"
-        
-        logger.debug(f"[SEARCH] Current search parameters. Product Number: '{product_number}' SO Number: '{so_number}' Show Finished: '{include_finished}'")
 
         return {'product_number': product_number, 'cut_in_full': include_finished, 'so_number': so_number}
     
@@ -391,25 +393,25 @@ class Application(QtWidgets.QMainWindow):
         tableWidget.setRowCount(0)
 
     def get_so_table_data(self, progress_signal=None, progress_data_signal=None) -> List[dict]:
-        # TODO: Remove this when we have a better way of getting the data.
         # FIXME: Check if items that are not fully cut are being loaded.
         # TODO: Check that Include Finished checkbox is working.
+        cut_list_generator_database = MySQLDatabaseConnection(connection_args=cutlistgenerator.program_settings.get_cutlist_settings()['auth'])
         table_data = []
         search_data = self.get_so_search_data()
-        _table_data = self.cut_list_generator_database.get_sales_order_table_data(search_data)
+        _table_data = cut_list_generator_database.get_sales_order_table_data(search_data)
         logger.debug(f"[SEARCH] Found {len(_table_data)} rows of data.")
 
         self.headers = utilities.get_max_column_widths(_table_data, self.headers)
 
         if progress_data_signal:
-            progress_data_signal.emit("Loading SO data into table...")
+            progress_data_signal.emit("Retreiving SO data...")
 
         for row_index, row in enumerate(_table_data, 1):
             if progress_signal:
                 progress_signal.emit(int(row_index / len(_table_data) * 100))
 
             is_child_item = row.pop('is_child_item')
-            sales_order_item = SalesOrderItem.from_id(self.cut_list_generator_database, row['Id'])
+            sales_order_item = SalesOrderItem.from_id(cut_list_generator_database, row['Id'])
 
             data = {
                 'is_child_item': is_child_item,
@@ -417,21 +419,24 @@ class Application(QtWidgets.QMainWindow):
                 'row': row
             }
             table_data.append(data)
+        cut_list_generator_database.disconnect()
         return table_data
     
     def load_so_table_data(self, table_data: list):
-        logger.debug("[LOAD TABLE] Loading SO data into table.")
-        self.clear_table(self.ui.sales_order_table_widget)
-
         # FIXME: Check if items that are not fully cut are being loaded.
         # TODO: Check that Include Finished checkbox is working.
+
+        total_rows = len(table_data)
+        self.set_progress_bar_text("Loading SO data...")
+        logger.debug(f"[LOAD TABLE] Loading {total_rows} rows of data.")
+        self.clear_table(self.ui.sales_order_table_widget)
         self.ui.sales_order_table_widget.setRowCount(len(table_data))
-        logger.debug(f"[SEARCH] Found {len(table_data)} rows of data.")
 
         self.headers = utilities.get_max_column_widths(table_data, self.headers)
 
         for row_index, row in enumerate(table_data):
-            is_child_item = row.pop('is_child_item')
+            self.update_progess_bar_value(int(row_index / total_rows * 100))
+
             sales_order_item = row.pop('sales_order_item')
             table_row = row.pop('row')
 
@@ -469,7 +474,7 @@ class Application(QtWidgets.QMainWindow):
                     width = 200
                 self.ui.sales_order_table_widget.setItem(row_index, column_index, QtWidgets.QTableWidgetItem(str(value)))
                 self.ui.sales_order_table_widget.setColumnWidth(column_index, width)
-
+        self.reset_progress_bar()
 
     def update_progess_bar_value(self, value):
         self.progressBar.setValue(value)
@@ -482,30 +487,56 @@ class Application(QtWidgets.QMainWindow):
         self.progressBar.hide()
 
     def thread_get_current_fb_data(self):
-        logger.info("[TREAD] Starting thread to get current sales order data from Fishbowl.")
-        self.ui.actionGet_Sales_Order_Data.setEnabled(False)
+        def set_updating_fishbowl_data(value: bool):
+            self.updating_fishbowl_data = value
+        
+        if self.updating_fishbowl_data:
+            logger.warning("Attempted to get data while fishbowl data was already being updated. Ignoring request.")
+            return
+
+        self.updating_fishbowl_data = True
+
+        logger.info("Starting thread to get current sales order data from Fishbowl.")
+        self.ui.action_fishbowl_Get_Sales_Order_Data.setEnabled(False)
+
+        fishbowl_database = FishbowlDatabaseConnection(connection_args=cutlistgenerator.program_settings.get_fishbowl_settings()['auth'])
 
         worker = Worker(fn=self.get_current_fb_data,
-                        fishbowl_database_connection_parameters=cutlistgenerator.program_settings.get_fishbowl_settings()['auth'],
+                        fishbowl_database=fishbowl_database,
                         cut_list_database=self.cut_list_generator_database
                         )
 
-        worker.signals.finished.connect(lambda: self.ui.actionGet_Sales_Order_Data.setEnabled(True))
-        worker.signals.result.connect(self.show_fishbowl_update_finished_message_box)
+
         worker.signals.finished.connect(self.reset_progress_bar)
         worker.signals.finished.connect(self.thread_get_so_table_data)
+        worker.signals.finished.connect(lambda: self.ui.action_fishbowl_Get_Sales_Order_Data.setEnabled(True))
+        worker.signals.finished.connect(lambda: logger.info("[FISHBOWL DATA] Finished retreiving data from Fishbowl."))
+        worker.signals.finished.connect(lambda: fishbowl_database.disconnect())
+        worker.signals.result.connect(lambda: set_updating_fishbowl_data(False))
+        worker.signals.result.connect(self.show_fishbowl_update_finished_message_box)
         worker.signals.progress.connect(self.update_progess_bar_value)
         worker.signals.progress_data.connect(self.set_progress_bar_text)
+
         self.progressBar.show()
         self.progressBar.setValue(0)
         self.threadpool.start(worker)
     
     def thread_get_so_table_data(self):
-        logger.info("[TREAD] Starting thread to reload SO data into table.")
+        def set_updating_table(value: bool):
+            self.updating_table = value
+        
+        if self.updating_table:
+            logger.warning("Attempted to get SO data while table was still updating. Ignoring request.")
+            return
+
+        self.updating_table = True
+        logger.info("Starting thread to reload SO data into table.")
 
         worker = Worker(fn=self.get_so_table_data)
 
         worker.signals.finished.connect(self.reset_progress_bar)
+        worker.signals.finished.connect(lambda: logger.info("[TABLE RELOAD] Finished reloading data into table."))
+        worker.signals.result.connect(lambda: set_updating_table(False))
         worker.signals.result.connect(self.load_so_table_data)
         worker.signals.progress.connect(self.update_progess_bar_value)
         worker.signals.progress_data.connect(self.set_progress_bar_text)
@@ -514,10 +545,10 @@ class Application(QtWidgets.QMainWindow):
         self.threadpool.start(worker)
     
     @staticmethod
-    def get_current_fb_data(fishbowl_database_connection_parameters, cut_list_database, progress_signal=None, progress_data_signal=None):
+    def get_current_fb_data(fishbowl_database: FishbowlDatabaseConnection, cut_list_database: CutListDatabase, progress_signal=None, progress_data_signal=None):
         # TODO: Rework this to enable pySignals to be used.
         start_time = datetime.datetime.now()
-        total_rows, rows_inserted, rows_updated, total_skipped = utilities.update_sales_order_data_from_fishbowl(fishbowl_database_connection_parameters, cut_list_database, progress_signal, progress_data_signal)
+        total_rows, rows_inserted, rows_updated, total_skipped = utilities.update_sales_order_data_from_fishbowl(fishbowl_database, cut_list_database, progress_signal, progress_data_signal)
         end_time = datetime.datetime.now()
         time_delta = end_time - start_time
         logger.info(f"[EXECUTION TIME]: {time_delta.total_seconds()} seconds.")
