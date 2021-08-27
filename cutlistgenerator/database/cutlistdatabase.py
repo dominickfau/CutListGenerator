@@ -255,3 +255,8 @@ class CutListDatabase(Database):
     def get_exclude_product_numbers_from_import(self) -> List[str]:
         """Get a list of product numbers to exclude from import."""
         pass
+
+    @abstractmethod
+    def save_product_number_to_exclude(self, product_number: str) -> None:
+        """Save product number to exclude."""
+        pass

@@ -193,14 +193,8 @@ class MainWindow(Ui_MainWindow, QtWidgets.QMainWindow):
             if ret == QMessageBox.No:
                 return
             
-            system_property = SystemProperty.find_by_name(database_connection=self.cut_list_generator_database, name="exclude_product_numbers_from_import")
-            if system_property is None:
-                system_property = SystemProperty(name="exclude_product_numbers_from_import", value=[product_number])
-            
-            if product_number not in system_property.value:
-                logger.info(f"Adding {product_number} to exclude list.")
-                system_property.value.append(product_number)
-                system_property.save()
+            logger.info(f"Adding {product_number} to exclude list.")
+            self.cut_list_generator_database.save_product_number_to_exclude(product_number)
             
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)

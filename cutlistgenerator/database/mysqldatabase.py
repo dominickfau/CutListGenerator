@@ -891,3 +891,10 @@ class MySQLDatabaseConnection(CutListDatabase):
         data = cursor.fetchall()
         cursor.close()
         return [row['number'] for row in data]
+    
+    def save_product_number_to_exclude(self, product_number: str) -> None:
+        cursor = self.get_cursor()
+        if product_number not in self.get_exclude_product_numbers_from_import():
+            cursor.execute("INSERT INTO exclude_product_number (number) VALUES (%(product_number)s)", {'product_number': product_number})
+            cursor.execute("COMMIT;")
+        cursor.close()
