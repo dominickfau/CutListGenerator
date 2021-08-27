@@ -25,6 +25,16 @@ class CutListDatabase(Database):
     def get_all_products(self) -> List[dict]:
         """Get all products. Returns empty list if not found."""
         pass
+    
+    @abstractmethod
+    def save_product_relationship(self, parent_product_id: int, child_product_id: int) -> None:
+        """Save a product relationship"""
+        pass
+    
+    @abstractmethod
+    def remove_product_relationship(self, parent_product_id: int, child_product_id: int) -> None:
+        """Remove a product relationship"""
+        pass
 
     @abstractmethod
     def save_product(self, product) -> int:
@@ -37,8 +47,8 @@ class CutListDatabase(Database):
         pass
     
     @abstractmethod
-    def get_parent_product_from_child_product_id(self, child_product_id) -> dict:
-        """Gets the parent product from a child product ID. Returns None if not found."""
+    def get_child_products_from_parent_product_id(self, parent_product_id) -> List[dict]:
+        """Get all products that are children of the given product ID. Returns empty list if not found."""
         pass
     
     # WireCutterOption methods

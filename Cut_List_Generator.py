@@ -14,7 +14,7 @@ from cutlistgenerator.gui_mainwindow import MainWindow
 
 DEFAULT_SETTINGS_FILE_NAME = "settings.json"
 PROGRAM_NAME = "Cut List Generator"
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 
 # Create settings file if it doesn't exist
 if not Settings.validate_file_path(DEFAULT_SETTINGS_FILE_NAME):

@@ -97,19 +97,36 @@ class MySQLDatabaseConnection(CutListDatabase):
             return []
         return products
     
-    def save_product(self, product) -> int:
-        if product.parent_kit_product:
-            parent_kit_product_id = product.parent_kit_product.id
-        else:
-            parent_kit_product_id = None
+    def save_product_relationship(self, parent_product_id: int, child_product_id: int) -> None:
+        values = {
+            'child_product_id': child_product_id,
+            'parent_product_id': parent_product_id
+        }
+        cursor = self.get_cursor()
+        cursor.execute("SELECT * FROM parent_to_child_product WHERE parent_product_id = %(parent_product_id)s AND child_product_id = %(child_product_id)s", values)
+        data = cursor.fetchone()
+        if not data:
+            cursor.execute("INSERT INTO parent_to_child_product (child_product_id, parent_product_id) VALUES (%(child_product_id)s, %(parent_product_id)s)", values)
+        cursor.execute("COMMIT;")
+        cursor.close()
+    
+    def remove_product_relationship(self, parent_product_id: int, child_product_id: int) -> None:
+        values = {
+            'child_product_id': child_product_id,
+            'parent_product_id': parent_product_id
+        }
+        cursor = self.get_cursor()
+        cursor.execute("DELETE FROM parent_to_child_product WHERE child_product_id = %(child_product_id)s AND parent_product_id = %(parent_product_id)s", values)
+        cursor.execute("COMMIT;")
+        cursor.close()
 
+    def save_product(self, product) -> int:
         values = {
             'number': product.number,
             'description': product.description,
             'uom': product.uom,
             'unit_price_dollars': product.unit_price_dollars,
             'kit_flag': product.kit_flag,
-            'parent_kit_product_id': parent_kit_product_id,
             'id': product.id
         }
 
@@ -120,19 +137,11 @@ class MySQLDatabaseConnection(CutListDatabase):
                                 VALUES(%(number)s, %(description)s, %(uom)s, %(unit_price_dollars)s, %(kit_flag)s)""", values)
             product_id = cursor.lastrowid
             values['id'] = product_id
-            if product.parent_kit_product:
-                cursor.execute("""INSERT INTO parent_to_child_product (child_product_id, parent_product_id)
-                                    VALUES(%(id)s, %(parent_kit_product_id)s)""", values)
         else:
             cursor.execute("""UPDATE product SET number = %(number)s, description = %(description)s, uom = %(uom)s,
                                 unit_price_dollars = %(unit_price_dollars)s, kit_flag = %(kit_flag)s
                                 WHERE id = %(id)s""", values)
             product_id = values["id"]
-            
-            if product.parent_kit_product:
-                cursor.execute("""DELETE FROM parent_to_child_product WHERE child_product_id = %(id)s""", values)
-                cursor.execute("""INSERT INTO parent_to_child_product (child_product_id, parent_product_id)
-                                    VALUES(%(id)s, %(parent_kit_product_id)s)""", values)
 
         cursor.execute("COMMIT;")
         cursor.close()
@@ -148,20 +157,20 @@ class MySQLDatabaseConnection(CutListDatabase):
         cursor.execute("COMMIT;")
         cursor.close()
     
-    def get_parent_product_from_child_product_id(self, child_product_id) -> dict:
+    def get_child_products_from_parent_product_id(self, parent_product_id) -> List[dict]:
         values = {
-            'child_product_id': child_product_id
+            'parent_product_id': parent_product_id
         }
 
         cursor = self.get_cursor()
-        cursor.execute("""SELECT product.*
+        cursor.execute("""SELECT DISTINCT product.*
                         FROM parent_to_child_product
-                        JOIN product ON parent_to_child_product.parent_product_id = product.id
-                        WHERE child_product_id = %(child_product_id)s""", values) 
-        parent_product = cursor.fetchone()
+                        JOIN product ON parent_to_child_product.child_product_id = product.id
+                        WHERE parent_product_id = %(parent_product_id)s""", values) 
+        parent_product = cursor.fetchall()
         cursor.close()
         if not parent_product:
-            return None
+            return []
         return parent_product
 
     

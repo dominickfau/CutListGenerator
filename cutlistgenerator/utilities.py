@@ -60,7 +60,7 @@ def create_child_product_recursively(fishbowl_database_connection: FishbowlDatab
         child_product_data = fishbowl_database_connection.get_product_data_from_number(child_product_number)
         child_product = Product(parent_product.database_connection, **child_product_data)
 
-    child_product.set_parent_kit_product(parent_product)
+    parent_product.add_child_product(child_product)
     child_product.save()
     data = fishbowl_database_connection.get_child_products_for_product_number(child_product.number)
     for item in data:
@@ -206,6 +206,7 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
             for child_row in child_data:
                 child_product_number = child_row['kit_part_number']
                 create_child_product_recursively(fishbowl_database, product, child_product_number)
+            product.save()
         else:
             logger.debug("Product found in database. Updating it.")
 

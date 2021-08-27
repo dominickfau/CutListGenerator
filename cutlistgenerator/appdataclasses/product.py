@@ -13,14 +13,17 @@ class Product:
     uom: str
     unit_price_dollars: float = None
     kit_flag: bool = False
-    parent_kit_product: 'Product' = None
+    child_products: List['Product'] = None
     id: int = None
 
     def __post_init__(self):
         """Initialize the product after it's been created."""
         
-        if self.kit_flag and self.parent_kit_product is None:
-            raise ProductNotInKitError("Product is marked as a kit but does not have a parent kit product.")
+        if self.kit_flag and self.child_products is None:
+            raise ProductNotInKitError("Product is marked as a kit but does not have child products.")
+        
+        if self.child_products is None:
+            self.child_products = []
 
         if self.unit_price_dollars is None:
             self.unit_price_dollars = 0.0
@@ -33,15 +36,16 @@ class Product:
         return "No"
 
     @staticmethod
-    def find_parent_kit_product_from_child_product_data(database_connection, product_data: dict) -> dict:
-        """Finds the parent kit product from the child product data. Returns product data with 'parent_kit_product' key populated."""
+    def find_child_products_from_parent_product_data(database_connection: CutListDatabase, product_data: dict) -> dict:
+        """Finds the child products from the parent product data. Returns product data with 'child_products' key populated."""
 
-        parent_kit_product = None
-        parent_kit_product_data = database_connection.get_parent_product_from_child_product_id(product_data['id'])
-        if parent_kit_product_data:
-            parent_kit_product = Product.from_number(database_connection, parent_kit_product_data['number'])
-        
-        product_data['parent_kit_product'] = parent_kit_product
+        child_products = []
+        child_products_data = database_connection.get_child_products_from_parent_product_id(product_data['id'])
+        for child_product_data in child_products_data:
+            child_product = Product.from_number(database_connection, child_product_data['number'])
+            child_products.append(child_product)
+            
+        product_data['child_products'] = child_products
         return product_data
 
     @classmethod
@@ -52,7 +56,7 @@ class Product:
         if not data:
             return None
         
-        data = cls.find_parent_kit_product_from_child_product_data(database_connection, data)
+        data = cls.find_child_products_from_parent_product_data(database_connection, data)
 
         return cls(database_connection, **data)
     
@@ -71,18 +75,23 @@ class Product:
         if not data:
             return None
         
-        data = cls.find_parent_kit_product_from_child_product_data(database_connection, data)
+        data = cls.find_child_products_from_parent_product_data(database_connection, data)
 
         return cls(database_connection, **data)
     
-    def set_parent_kit_product(self, parent_kit_product: 'Product'):
-        """Sets the parent kit product number for this product."""
-        if not parent_kit_product:
+    def add_child_product(self, child_product: 'Product'):
+        """Adds a child product."""
+        if not child_product:
             return
-        self.parent_kit_product = parent_kit_product
         self.kit_flag = True
+        if child_product not in self.child_products:
+            self.child_products.append(child_product)
     
     def save(self):
         """Saves the product to the database."""
 
         self.id = self.database_connection.save_product(self)
+
+        for child_product in self.child_products:
+            child_product.save()
+            self.database_connection.save_product_relationship(self.id, child_product.id)
