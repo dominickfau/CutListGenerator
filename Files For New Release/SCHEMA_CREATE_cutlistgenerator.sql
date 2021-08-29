@@ -186,6 +186,7 @@ SELECT
 	sales_order_item.due_date AS due_date,
 	sales_order.customer_name AS customer_name,
 	sales_order.number AS sales_order_number,
+    sales_order_item.id AS sales_order_item_id,
 	product.number AS product_number,
 	product.description AS product_description,
 	product.unit_price_dollars AS unit_price_dollars,

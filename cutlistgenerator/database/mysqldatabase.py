@@ -1,10 +1,6 @@
 from . import *
 
 from .cutlistdatabase import CutListDatabase
-from cutlistgenerator.logging import FileLogger
-# from .mysqldatabasecreate import TABLE_DATA
-
-logger = FileLogger(__name__)
 
 class MySQLDatabaseConnection(CutListDatabase):
     """MySQL Database Connection for the cut list database."""
@@ -773,7 +769,7 @@ class MySQLDatabaseConnection(CutListDatabase):
             delimiter = self.get_system_property_by_name("list_to_string_delimiter")["value"]
             system_property["value"] = [item.strip() for item in system_property["value"].split(delimiter)]
         else:
-            logger.warning(f"No type conversion for system property {system_property['name']} with value_type {system_property['value_type']}. Defaulting to str.")
+            system_property["value"] = None
         return system_property
 
     def save_system_property(self, system_property) -> int:

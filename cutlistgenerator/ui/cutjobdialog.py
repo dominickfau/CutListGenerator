@@ -11,16 +11,13 @@ from cutlistgenerator.appdataclasses.product import Product
 from cutlistgenerator.appdataclasses.wirecutter import WireCutter
 from cutlistgenerator.appdataclasses.cutjob import CutJob
 from cutlistgenerator.appdataclasses.salesorder import SalesOrder, SalesOrderItem
-from cutlistgenerator.logging import FileLogger
 from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
-
-
-logger = FileLogger(__name__)
 
 class CutJobDialog(Ui_cut_job_dialog, QDialog):
     def __init__(self,
                  cut_list_generator_database: CutListDatabase,
                  fishbowl_database: FishbowlDatabaseConnection,
+                 logger,
                  product: Product = None,
                  linked_so_item: SalesOrderItem = None,
                  cut_job: CutJob = None,
@@ -28,6 +25,7 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
         super(Ui_cut_job_dialog, self).__init__(parent)
         self.setupUi(self)
         self.date_formate = SystemProperty.find_by_name(database_connection=cut_list_generator_database, name="date_formate").value
+        self.logger = logger
 
         # BUG: Fix this.
         # if cut_job is None or not (product is None and linked_so_item is None):
@@ -122,7 +120,7 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
 
     def link_sales_order_item(self, sales_order_item: SalesOrderItem) -> None:
         """Links a sales order item to the cut job. Takes a sales order item id."""
-        logger.debug(f"Attempting to link sales order item id {sales_order_item} to cut job.")
+        self.logger.debug(f"Attempting to link sales order item id {sales_order_item} to cut job.")
 
         self.linked_so_item = sales_order_item
         self.sales_order = SalesOrder.from_sales_order_item_id(self.cut_list_generator_database, sales_order_item.id)
@@ -134,7 +132,7 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
     
     def unlink_sales_order_item(self):
         """Unlinks the sales order item from the cut job."""
-        logger.info(f"[CUT JOB] Unlinking sales order item from cut job.")
+        self.logger.info(f"[CUT JOB] Unlinking sales order item from cut job.")
         self.linked_so_item = None
         self.sales_order = None
         self.linked_sales_order_number_value_label.setText("")
@@ -184,12 +182,12 @@ class CutJobDialog(Ui_cut_job_dialog, QDialog):
         selected_wire_cutter_name = self.wire_cutter_name_combo_box.currentText()
         wire_cutter = None
         if selected_wire_cutter_name:
-            logger.debug(f"Attempting to add wire cutter {selected_wire_cutter_name} to cut job.")
+            self.logger.debug(f"Attempting to add wire cutter {selected_wire_cutter_name} to cut job.")
             wire_cutter = WireCutter.from_name(self.cut_list_generator_database, selected_wire_cutter_name)
             if wire_cutter:
-                logger.info(f"[CUT JOB] Adding wire cutter {wire_cutter.name} to cut job.")
+                self.logger.info(f"[CUT JOB] Adding wire cutter {wire_cutter.name} to cut job.")
             else:
-                logger.warning(f"[CUT JOB] Could not find wire cutter with name: {selected_wire_cutter_name}.")
+                self.logger.warning(f"[CUT JOB] Could not find wire cutter with name: {selected_wire_cutter_name}.")
 
         dialog = WireCutterDialog(self.cut_list_generator_database, wire_cutter, parent=self)
         if dialog.exec():

@@ -7,10 +7,6 @@ from .database.cutlistdatabase import CutListDatabase
 from .appdataclasses.product import Product
 from .appdataclasses.salesorder import SalesOrder, SalesOrderItem
 from .appdataclasses.systemproperty import SystemProperty
-from .logging import FileLogger
-
-
-logger = FileLogger(__name__)
 
 
 class MyEncoder(JSONEncoder):
@@ -69,6 +65,7 @@ def create_child_product_recursively(fishbowl_database_connection: FishbowlDatab
 
 def add_child_product_recursively(fishbowl_database_connection: FishbowlDatabaseConnection,
                                   cut_list_database: CutListDatabase,
+                                  logger,
                                   parent_sales_order: SalesOrder,
                                   parent_sales_order_item: SalesOrderItem,
                                   child_product_number: str) -> None:
@@ -109,6 +106,7 @@ def add_child_product_recursively(fishbowl_database_connection: FishbowlDatabase
             new_child_product_number = item['kit_part_number']
             add_child_product_recursively(fishbowl_database_connection,
                                           cut_list_database,
+                                          logger,
                                           parent_sales_order,
                                           parent_sales_order_item,
                                           new_child_product_number)
@@ -116,6 +114,7 @@ def add_child_product_recursively(fishbowl_database_connection: FishbowlDatabase
 
 def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseConnection,
                                           cut_list_database: CutListDatabase,
+                                          logger,
                                           progress_signal = None,
                                           progress_data_signal = None):
     # TODO: Add ability to update sales order from fishbowl.
@@ -238,6 +237,7 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
                 child_product_number = child_row['kit_part_number']
                 add_child_product_recursively(fishbowl_database,
                                             cut_list_database,
+                                            logger,
                                             parent_sales_order=sales_order,
                                             parent_sales_order_item=sales_order_item,
                                             child_product_number=child_product_number)
@@ -291,7 +291,7 @@ def update_sales_order_data_from_fishbowl(fishbowl_database: FishbowlDatabaseCon
     return total_rows, rows_inserted, rows_updated, total_skipped
 
 
-def create_default_system_properties(database_connection: CutListDatabase):
+def create_default_system_properties(database_connection: CutListDatabase, logger):
     logger.info("[SYSTEM PROPERTY] Checking that all system properties exist.")
 
     if not SystemProperty.find_by_name(database_connection=database_connection, name="list_to_string_delimiter"):
@@ -325,10 +325,10 @@ def create_default_system_properties(database_connection: CutListDatabase):
     
     logger.info("[SYSTEM PROPERTY] Finished. All system properties should now exist.")
 
-def create_database(database_connection: CutListDatabase):
+def create_database(database_connection: CutListDatabase, logger):
     database_connection.create()
     logger.info("[DATABASE] Adding default data to tables.")
-    create_default_system_properties(database_connection)
+    create_default_system_properties(database_connection, logger)
 
 def convert_string_to_pixel_width(string_width: str) -> int:
     """Convert a string to a pixel width."""
@@ -372,3 +372,15 @@ def convert_customer_name(database_connection: CutListDatabase, customer_name: s
     if not result:
         return customer_name
     return result['to_']
+
+def to_bool(value: str) -> bool:
+    """Converts a string to a boolean."""
+    if isinstance(value, bool):
+        return value
+    if value.lower() == 'true':
+        return True
+    elif value.lower() == 'false':
+        return False
+    else:
+        # TODO: Create an exception for this.
+        raise ValueError(f"Invalid value for boolean: {value}")

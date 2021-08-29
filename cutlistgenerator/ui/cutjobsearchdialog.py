@@ -11,19 +11,18 @@ from cutlistgenerator.logging import FileLogger
 from cutlistgenerator import utilities
 from cutlistgenerator.appdataclasses.systemproperty import SystemProperty
 
-
-logger = FileLogger(__name__)
-
 class CutJobSearchDialog(Ui_cut_job_search_dialog, QDialog):
     # TODO: Convert into a persistant dialog.
     def __init__(self,
                 cut_list_generator_database: CutListDatabase,
+                logger: FileLogger,
                 product: Product = None,
                 wire_cutter: WireCutter = None,
                 sales_order_item: SalesOrderItem = None,
                 parent=None):
         super(Ui_cut_job_search_dialog, self).__init__(parent)
         self.setupUi(self)
+        self.logger = logger
 
         # Object attributes
         self.cut_list_generator_database = cut_list_generator_database
@@ -98,7 +97,7 @@ class CutJobSearchDialog(Ui_cut_job_search_dialog, QDialog):
         }
     
     def clear_table(self, tableWidget):
-        logger.debug("[TABLE] Clearing table.")
+        self.logger.debug("[TABLE] Clearing table.")
         tableWidget.setRowCount(0)
 
     def on_search_button_clicked(self):

@@ -1,2 +1,5 @@
 pyqt5
 mysql-connector
+openpyxl
+pandas
+numpy

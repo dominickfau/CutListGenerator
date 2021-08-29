@@ -1,28 +1,21 @@
-import logging, os
-
-from cutlistgenerator import program_settings
-
+import logging
 
 class FileLogger:
     """Creates a logger."""
 
-    def __init__(self, name, file_name=None) -> None:
-        """Create a new logger with the given name. Defaults to log level INFO."""
-
-        LOG_FILE_NAME = "cutlistgenerator.log"
-        LOG_FILE_PATH = os.path.join(os.path.dirname("Cut_List"), LOG_FILE_NAME)
-        LOGGING_LEVEL = program_settings.get_logging_level()
-
+    def __init__(self, name, file_name) -> None:
+        """Create a new logger with the given name."""
         self._logger =  logging.getLogger(name)  # Create python logger
+        self.set_logging_level("INFO")
 
         # Do not try to save to the app dir as it may not be writeable or may not be the right
         # location to save the log file. Instead, try and save in the settings location since
         # that should be writeable.
-        if file_name is None:
-            file_name = LOG_FILE_PATH
         self.set_file_name(file_name)
-
-        self._logger.setLevel(LOGGING_LEVEL)
+    
+    def set_logging_level(self, level: str) -> None:
+        """Set the minimum log level for this logger."""
+        self._logger.setLevel(level)
 
     def set_file_name(self, file_name) -> None:
         """Set the file name of the log file."""

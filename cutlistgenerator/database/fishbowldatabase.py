@@ -1,9 +1,5 @@
 from . import *
 
-from cutlistgenerator.logging import FileLogger
-
-logger = FileLogger(__name__)
-
 
 class FishbowlDatabaseConnection(Database):
     """MySQL database connection to a Fishbowl database."""
@@ -34,8 +30,6 @@ class FishbowlDatabaseConnection(Database):
     def get_all_open_sales_order_items(self) -> List[dict]:
         """Returns a list of dictionaries containing the sales order number, product number,
         and product name for all open sales order items."""
-
-        logger.info("[FISHBOWL] Retrieveing all open sales order items.")
 
         cursor = self.get_cursor()
         # CASE 
