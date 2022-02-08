@@ -1,13 +1,13 @@
 from __future__ import annotations
 import sys
-import threading
+import logging
 from datetime import datetime
 from dataclasses import dataclass
 from PyQt5 import QtCore, QtGui, QtWidgets
 import cutlistgenerator
 import fishbowlorm
 from fishbowlorm import models as fb_models
-from cutlistgenerator import frontend_logger, errors
+from cutlistgenerator import errors
 from cutlistgenerator import (
     PROGRAM_NAME,
     PROGRAM_VERSION,
@@ -40,7 +40,7 @@ from cutlistgenerator.database.models import (
     Part,
 )
 
-cutlistgenerator.database.create(force_recreate=FORCE_REBUILD_DATABASE)
+frontend_logger = logging.getLogger("frontend")
 
 # db_name = "qes"
 # host = "192.168.1.107"
@@ -562,6 +562,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tab_widget.addTab(self.cut_jobs_tab, "Cut Jobs")
 
         self.cut_job_table = CustomQTableWidget()
+        self.cut_job_table.customContextMenuRequested.connect(
+            self.on_cut_job_table_custom_context_menu_requested
+        )
         self.cut_job_table.setSelectionMode(
             QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection
         )
@@ -569,12 +572,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def on_sales_order_table_custom_context_menu_requested(self, pos):
         """Called when the user right-clicks on the sales order table."""
-        self.sales_order_table.show_row_context_menu(pos)
-        return
-        # TODO: Implement
+        # TODO: Implement on_sales_order_table_custom_context_menu_requested
         menu = QtWidgets.QMenu()
-        menu.addAction("Create Cut Job", self.create_cut_job_from_selected_sales_orders)
+        menu.addAction("Copy", self.sales_order_table.copy_selected_rows)
         menu.exec_(self.sales_order_table.viewport().mapToGlobal(pos))
+
+    def on_cut_job_table_custom_context_menu_requested(self, pos):
+        """Called when the user right-clicks on the sales order table."""
+        # TODO: Implement on_cut_job_table_custom_context_menu_requested
+        menu = QtWidgets.QMenu()
+        menu.addAction("Copy", self.cut_job_table.copy_selected_rows)
+        menu.exec_(self.cut_job_table.viewport().mapToGlobal(pos))
 
     def refresh_so_search_customer_combo_box(self):
         self.so_search_customer_combo_box.clear()
@@ -775,7 +783,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     ):
                         continue
 
-                    self.sales_order_table.add_row(
+                    self.sales_order_table.insert_row_data(
                         [
                             so.number,
                             so.customer.name_converted,
@@ -808,7 +816,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 for item in cut_job.items:
                     if item.sales_order_items:
                         for _ in item.sales_order_items:
-                            self.cut_job_table.add_row(
+                            self.cut_job_table.insert_row_data(
                                 [
                                     cut_job.number,
                                     cut_job.status.name,
@@ -822,7 +830,7 @@ class MainWindow(QtWidgets.QMainWindow):
                             )
                         continue
 
-                    self.cut_job_table.add_row(
+                    self.cut_job_table.insert_row_data(
                         [
                             cut_job.number,
                             cut_job.status.name,

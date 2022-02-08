@@ -1,5 +1,6 @@
 import sqlalchemy
 import datetime
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, DateTime, String
 from sqlalchemy.orm import sessionmaker

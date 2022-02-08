@@ -319,3 +319,4 @@ if DEBUG:
 
 
 from cutlistgenerator import database
+database.create(force_recreate=FORCE_REBUILD_DATABASE)
