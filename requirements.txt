@@ -1,5 +1,8 @@
 pyqt5
-mysql-connector
-openpyxl
-pandas
-numpy
+sqlalchemy
+black
+flask
+flask-restful
+pymysql
+auto-py-to-exe
+waitress

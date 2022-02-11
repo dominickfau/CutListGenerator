@@ -1,5 +1,0 @@
-Host: 192.168.2.254
-Port: 3305
-User: gone
-Password: fishing
-Schema: qes

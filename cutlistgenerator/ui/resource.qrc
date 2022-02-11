@@ -1,5 +1,0 @@
-<RCC>
-  <qresource prefix="HelpWindow">
-    <file>Images/Help/Cut_Job_Dialog.PNG</file>
-  </qresource>
-</RCC>
