@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSlot, pyqtSignal, QObject, Qt
 from PyQt5.QtWidgets import QApplication, QMessageBox, QProgressBar, QPushButton
+from cutlistgenerator.database.models.customer import Customer
 import fishbowlorm
 from cutlistgenerator import (
     FISHBOWL_DATABASE_USER,
@@ -65,10 +66,10 @@ COLUMNS = [
 class SalesOrderSearchCriteria:
     """The search criteria for the sales order table."""
 
-    number: str = ""
-    customer_name: str = ""
-    status: str = ""
-    show_fully_cut: bool = False
+    so_number: str
+    customer_name: str
+    part_number: str
+    show_fully_cut: bool
 
 
 class Worker(QRunnable):
@@ -117,7 +118,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.updating_table = False
         self.updating_fishbowl_data = False
-        self.table_data = []  # type: list[SalesOrder]
 
         self.threadpool = QThreadPool()
         self.progressBar = QProgressBar()
@@ -383,6 +383,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.view_selected_so_button.setEnabled(True)
 
     def connect_signals(self):
+        self.so_search_number_lineedit.returnPressed.connect(self.reload_so_table)
+        self.so_search_customer_name_lineedit.returnPressed.connect(
+            self.reload_so_table
+        )
+        self.so_search_part_number_lineedit.returnPressed.connect(self.reload_so_table)
+        self.include_fully_cut_checkbox.stateChanged.connect(self.reload_so_table)
+
         self.so_search_number_lineedit.editingFinished.connect(
             lambda x=self.so_search_number_lineedit: utilities.clean_text_input(x)
         )
@@ -451,33 +458,64 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dissable()
         self.threadpool.start(worker)
 
+    def get_so_table_search_criteria(self) -> SalesOrderSearchCriteria:
+        return SalesOrderSearchCriteria(
+            so_number=self.so_search_number_lineedit.text(),
+            customer_name=self.so_search_customer_name_lineedit.text(),
+            part_number=self.so_search_part_number_lineedit.text(),
+            show_fully_cut=self.include_fully_cut_checkbox.isChecked(),
+        )
+
     def reload_so_table(self):
+        search_criteria = self.get_so_table_search_criteria()
         self.so_table_widget.setRowCount(0)
-        self.table_data = SalesOrder.find_all_unfinished()
-        search_criteria = None  # TODO: Implement search criteria.
+        query = (
+            global_session.query(SalesOrder, Customer, SalesOrderItem, Part)
+            .join(Customer)
+            .join(SalesOrderItem)
+            .join(Part)
+        )
+
+        query = query.filter(
+            SalesOrderItem.quantity_to_fulfill
+            - SalesOrderItem.quantity_fulfilled
+            - SalesOrderItem.quantity_picked
+            > 0
+        )
+
+        if not search_criteria.show_fully_cut:
+            query = query.filter(SalesOrderItem.is_cut == False)
+
+        if search_criteria.so_number != "":
+            query = query.filter(SalesOrder.number.contains(search_criteria.so_number))
+
+        if search_criteria.customer_name != "":
+            query = query.filter(Customer.name.contains(search_criteria.customer_name))
+
+        if search_criteria.part_number != "":
+            query = query.filter(Part.number.contains(search_criteria.part_number))
+
+        query = query.order_by(SalesOrder.date_scheduled_fulfillment)
+        results = query.all()
 
         data = []
-        for so in self.table_data:
-            for item in so.items:
-                if item.quantity_left_to_fulfill == 0 or item.is_cut:
-                    continue
-
-                data.append(
-                    [
-                        item.date_scheduled_fulfillment.strftime(DATE_FORMAT),
-                        item.pushed_back_due_date.strftime(DATE_FORMAT),
-                        so.customer.name_converted,
-                        so.number,
-                        item.line_number,
-                        item.part.number,
-                        item.part.description,
-                        str(int(item.quantity_left_to_fulfill)),
-                        item.has_cut_job_item_string,
-                        item.fully_cut,
-                        item.part.parent.number if item.part.parent else "",
-                        item.part.parent.description if item.part.parent else "",
-                    ]
-                )
+        for sales_order, customer, sales_order_item, part in results:
+            data.append(
+                [
+                    sales_order_item.date_scheduled_fulfillment.strftime(DATE_FORMAT),
+                    sales_order_item.pushed_back_due_date.strftime(DATE_FORMAT),
+                    customer.name_converted,
+                    sales_order.number,
+                    sales_order_item.line_number,
+                    part.number,
+                    part.description,
+                    str(int(sales_order_item.quantity_left_to_fulfill)),
+                    sales_order_item.has_cut_job_item_string,
+                    sales_order_item.fully_cut,
+                    part.parent.number if part.parent else "",
+                    part.parent.description if part.parent else "",
+                ]
+            )
 
         for row in data:
             self.so_table_widget.insert_row_data(row)
