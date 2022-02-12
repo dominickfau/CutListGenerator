@@ -397,9 +397,8 @@ class CutJobEditorDialog(QtWidgets.QDialog):
 
     def __init__(
         self,
-        sales_order_item: SalesOrderItem,
+        sales_order_items: list[SalesOrderItem],
         cut_job: CutJob = None,
-        sales_order_items: list[SalesOrderItem] = None,
         parent=None,
     ):
         super().__init__(parent)
@@ -409,10 +408,11 @@ class CutJobEditorDialog(QtWidgets.QDialog):
         self.setWindowTitle("Cut Job Editor")
         self.keyPressEvent = self.key_pressed_event
 
-        self.sales_order_item = sales_order_item
+        self.sales_order_items = sales_order_items
         self.cut_job = cut_job
-        if self.cut_job is None and self.sales_order_item.cut_job_item:
-            self.cut_job = self.sales_order_item.cut_job_item.cut_job
+
+        if self.cut_job is None and self.sales_order_items[0].cut_job_item:
+            self.cut_job = self.sales_order_items[0].cut_job_item.cut_job
 
         self.create_widgets()
         self.create_layout()
@@ -422,16 +422,22 @@ class CutJobEditorDialog(QtWidgets.QDialog):
             status = CutJobItemStatus.find_by_name("Entered")
             wire_cutter = self.wire_cutter_combo_box.currentData()
             self.cut_job = CutJob.create(wire_cutter)
-            cut_job_item = CutJobItem(
-                cut_job_id=self.cut_job.id,
-                status_id=status.id,
-                part_id=self.sales_order_item.part_id,
-            )
-            if self.sales_order_item:
-                cut_job_item.add_sales_order_item(self.sales_order_item)
 
-            if sales_order_items:
-                for sales_order_item in sales_order_items:
+            for sales_order_item in self.sales_order_items:
+                part = sales_order_item.part
+
+                for cut_job_item in self.cut_job.items:
+                    if cut_job_item.part_id == part.id:
+                        cut_job_item.add_sales_order_item(sales_order_item)
+                        break
+                else:  # This is skipped if the break statement is executed
+                    cut_job_item = CutJobItem(
+                        cut_job_id=self.cut_job.id,
+                        part_id=part.id,
+                        status_id=status.id,
+                    )
+                    global_session.add(cut_job_item)
+                    global_session.commit()
                     cut_job_item.add_sales_order_item(sales_order_item)
 
         self.reload_table()
@@ -601,6 +607,7 @@ class CutJobItemEditorDialog(QtWidgets.QDialog):
         self.create_connections()
         if self.cut_job_item:
             self.part_combo_box.setEnabled(False)
+            self.quantity_to_cut_spin_box.setEnabled(False)
 
     def key_pressed_event(self, event):
         if event.key() == Qt.Key_Escape:
@@ -657,8 +664,8 @@ class CutJobItemEditorDialog(QtWidgets.QDialog):
         form_layout = QtWidgets.QFormLayout()
         form_layout.addRow("Part", self.part_combo_box)
         form_layout.addRow("Status", self.item_status_combo_box)
-        form_layout.addRow("Quantity to cut", self.quantity_to_cut_spin_box)
-        form_layout.addRow("Quantity cut", self.quantity_cut_spin_box)
+        form_layout.addRow("Quantity To Cut", self.quantity_to_cut_spin_box)
+        form_layout.addRow("Quantity Cut", self.quantity_cut_spin_box)
 
         layout.addLayout(form_layout)
         layout.addWidget(self.save_button)

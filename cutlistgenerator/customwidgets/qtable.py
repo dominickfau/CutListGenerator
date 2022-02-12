@@ -19,7 +19,7 @@ class CustomQTableWidget(QtWidgets.QTableWidget):
         self.setAlternatingRowColors(True)
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.horizontalHeader().setContextMenuPolicy(QtCore.Qt.CustomContextMenu)

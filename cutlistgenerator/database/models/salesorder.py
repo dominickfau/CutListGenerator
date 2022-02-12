@@ -304,6 +304,16 @@ class SalesOrderItem(Base, Auditing):
         return self.parent_item_id is not None
 
     @property
+    def has_cut_job_item(self) -> bool:
+        """Returns True if this item has a cut job item."""
+        return self.cut_job_item is not None
+
+    @property
+    def has_cut_job_item_string(self) -> str:
+        """Returns a string indicating whether this item has a cut job item."""
+        return "Yes" if self.has_cut_job_item else "No"
+
+    @property
     def fully_cut(self) -> str:
         """Returns True if this item is fully cut."""
         return "Yes" if self.is_cut else "No"

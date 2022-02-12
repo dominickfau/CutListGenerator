@@ -1,5 +1,4 @@
 from __future__ import annotations
-from re import S
 import sys
 import logging
 from dataclasses import dataclass
@@ -55,6 +54,7 @@ COLUMNS = [
     "Part Number",
     "Description",
     "Qty Left To Ship",
+    "Has Cut Job",
     "Fully Cut",
     "Parent Number",
     "Parent Description",
@@ -244,6 +244,7 @@ class MainWindow(QtWidgets.QMainWindow):
         menu = QtWidgets.QMenu()
         menu.addAction("Exclude From Import", self.on_excluded_from_import_clicked)
         menu.addAction("Change Due Date Pushback", self.on_change_due_date_push_back_clicked)
+        menu.addAction("Create New Cut Job", self.on_create_new_cut_job_clicked)
         menu.addAction("Copy", self.so_table_widget.copy_selected_rows)
         menu.exec_(self.so_table_widget.mapToGlobal(pos))
     # This line restarts the black magic.
@@ -347,18 +348,36 @@ class MainWindow(QtWidgets.QMainWindow):
         frontend_logger.info(f"Removed {total} sales order items for {part.number}.")
         self.reload_so_table()
 
+    # fmt: off
     def on_so_table_row_double_clicked(self, row: QtWidgets.QTableWidgetItem):
         index = row.row()
         so_number = self.so_table_widget.item(index, COLUMNS.index("SO Number")).text()
-        line_number = self.so_table_widget.item(
-            index, COLUMNS.index("Line Number")
-        ).text()
-        sales_order_item = SalesOrderItem.find_by_so_number_line_number(
-            so_number=so_number, line_number=line_number
-        )
-        dialog = CutJobEditorDialog(sales_order_item=sales_order_item, parent=self)
+        line_number = self.so_table_widget.item(index, COLUMNS.index("Line Number")).text()
+        sales_order_item = SalesOrderItem.find_by_so_number_line_number(so_number=so_number, line_number=line_number)
+        dialog = CutJobEditorDialog(sales_order_items=[sales_order_item], parent=self)
         dialog.exec()
         self.reload_so_table()
+
+    def on_create_new_cut_job_clicked(self):
+        selected_items = self.so_table_widget.selectedItems()
+        selected_rows = []
+        for item in selected_items:
+            index = item.row()
+            if index in selected_rows:
+                continue
+            selected_rows.append(index)
+        
+        sales_order_items = [] # type: list[SalesOrderItem]
+        for index in selected_rows:
+            so_number = self.so_table_widget.item(index, COLUMNS.index("SO Number")).text()
+            line_number = self.so_table_widget.item(index, COLUMNS.index("Line Number")).text()
+            sales_order_item = SalesOrderItem.find_by_so_number_line_number(so_number=so_number, line_number=line_number)
+            sales_order_items.append(sales_order_item)
+        
+        dialog = CutJobEditorDialog(sales_order_items=sales_order_items, parent=self)
+        dialog.exec()
+        self.reload_so_table()
+    # fmt: on
 
     def on_so_table_selection_changed(self):
         self.view_selected_so_button.setEnabled(True)
@@ -437,22 +456,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table_data = SalesOrder.find_all_unfinished()
         search_criteria = None  # TODO: Implement search criteria.
 
-        # "Due Date",
-        # "Customer",
-        # "SO Number",
-        # "Line Number",
-        # "Part Number",
-        # "Description",
-        # "Qty Left To Ship",
-        # "Fully Cut",
-        # "Parent Number",
-        # "Parent Description",
-
         data = []
         for so in self.table_data:
             for item in so.items:
                 if item.quantity_left_to_fulfill == 0 or item.is_cut:
                     continue
+
                 data.append(
                     [
                         item.date_scheduled_fulfillment.strftime(DATE_FORMAT),
@@ -463,6 +472,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         item.part.number,
                         item.description,
                         str(int(item.quantity_left_to_fulfill)),
+                        item.has_cut_job_item_string,
                         item.fully_cut,
                         item.parent_item.part.number if item.parent_item else "",
                         item.parent_item.part.description if item.parent_item else "",
