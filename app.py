@@ -15,7 +15,11 @@ from cutlistgenerator import (
     FISHBOWL_DATABASE_SCHEMA,
 )
 from cutlistgenerator.database import global_session
-from cutlistgenerator.database.models.salesorder import SalesOrder, SalesOrderItem
+from cutlistgenerator.database.models.salesorder import (
+    SalesOrder,
+    SalesOrderItem,
+    SalesOrderStatus,
+)
 from cutlistgenerator.database.models.part import Part
 from cutlistgenerator.settings import *
 from cutlistgenerator import utilities
@@ -469,6 +473,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def reload_so_table(self):
         search_criteria = self.get_so_table_search_criteria()
         self.so_table_widget.setRowCount(0)
+        so_open_status = SalesOrderStatus.find_by_name("In Progress")
         query = (
             global_session.query(SalesOrder, Customer, SalesOrderItem, Part)
             .join(Customer)
@@ -482,6 +487,8 @@ class MainWindow(QtWidgets.QMainWindow):
             - SalesOrderItem.quantity_picked
             > 0
         )
+
+        query = query.filter(SalesOrder.status_id <= so_open_status.id)
 
         if not search_criteria.show_fully_cut:
             query = query.filter(SalesOrderItem.is_cut == False)

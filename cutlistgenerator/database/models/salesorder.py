@@ -219,6 +219,15 @@ class SalesOrder(Base, Auditing):
             .all()
         )
 
+    @staticmethod
+    def remove_empty_orders():
+        """Removes all sales orders that have no items."""
+        orders = global_session.query(SalesOrder).all()
+        for order in orders:
+            if not order.items:
+                global_session.delete(order)
+        global_session.commit()
+
 
 class SalesOrderItem(Base, Auditing):
     __tablename__ = "sales_order_item"
@@ -393,4 +402,5 @@ class SalesOrderItem(Base, Auditing):
             total += 1
             global_session.delete(item)
         global_session.commit()
+        SalesOrder.remove_empty_orders()
         return total
