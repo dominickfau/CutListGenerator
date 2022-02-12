@@ -8,7 +8,6 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session as session_type_hint
 from sqlalchemy.ext.declarative import declarative_base
 
-
 from cutlistgenerator import (
     DATABASE_URL_WITH_SCHEMA,
     DATABASE_URL_WITHOUT_SCHEMA,

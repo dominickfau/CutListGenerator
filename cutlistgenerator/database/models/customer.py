@@ -1,10 +1,16 @@
 from __future__ import annotations
 import time
 import logging
+<<<<<<< HEAD
 from fishbowlorm.models import FBCustomer, FBSalesOrder
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from cutlistgenerator.database import Base, Auditing, global_session
+=======
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
+from cutlistgenerator.database import Base, Auditing, session
+>>>>>>> d46f4b350d54fc3183be302d62ac1458f071c414
 
 
 backend_logger = logging.getLogger("backend")

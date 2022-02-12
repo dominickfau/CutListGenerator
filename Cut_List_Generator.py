@@ -21,8 +21,10 @@ from cutlistgenerator.ui.cutjobdialog import CutJobDialog
 from cutlistgenerator.ui.cutjobsearchdialog import CutJobSearchDialog
 from cutlistgenerator.ui.wirecutterdialog import WireCutterDialog
 from cutlistgenerator.ui.wirecuttersearchdialog import WireCutterSearchDialog
+from cutlistgenerator.ui.programsettingsdialog import ProgramSettingsDialog
 
 from cutlistgenerator.ui.customwidgets.resizablemessagebox import ResizableMessageBox
+from cutlistgenerator.appdataclasses.worker import Worker, WorkerSignals
 
 from cutlistgenerator.database.mysqldatabase import MySQLDatabaseConnection
 from cutlistgenerator.database.fishbowldatabase import FishbowlDatabaseConnection
@@ -104,7 +106,7 @@ class MainWindow(Ui_MainWindow, QtWidgets.QMainWindow):
 
         # File
         # TODO: Add file menu functions.
-        # self.actionSettings.triggered.connect(self.show_settings_dialog)
+        self.actionSettings.triggered.connect(self.show_settings_dialog)
         # self.actionSystem_Properties.triggered.connect(self.show_system_properties_dialog)
         # self.actionHelp.triggered.connect(self.show_help_dialog)
         # self.actionAbout.triggered.connect(self.show_about_dialog)
@@ -218,6 +220,32 @@ class MainWindow(Ui_MainWindow, QtWidgets.QMainWindow):
 
         self.thread_get_so_table_data()
 
+    def show_settings_dialog(self):
+        settings = {
+            "General Settings": {
+                "logging_level": self.logging_level,
+                "database_setup_completed": self.database_setup_completed,
+            },
+            "Fishbowl Settings": {"Fishbowl MySQL": self.fishbowl_credentials},
+            "Cut List Settings": {"CutList MySQL": self.cutlist_credentials},
+        }
+        dialog = ProgramSettingsDialog(settings=settings)
+        if dialog.exec():
+            settings = dialog.settings
+            self.logging_level = settings["General Settings"]["logging_level"]
+            self.database_setup_completed = settings["General Settings"][
+                "database_setup_completed"
+            ]
+            self.fishbowl_credentials = settings["Fishbowl Settings"]["Fishbowl MySQL"]
+            self.cutlist_credentials = settings["Cut List Settings"]["CutList MySQL"]
+            self.save_settings()
+            self.logger.info("[SETTINGS] Settings updated.")
+            QMessageBox.information(
+                self,
+                "Settings Updated",
+                "Settings have been updated.\n\nChanges will not take affect until the program is reopened.",
+            )
+
     def configure_settings(self):
         """Configures the settings for the application."""
         self.settings = QSettings()
@@ -257,7 +285,9 @@ class MainWindow(Ui_MainWindow, QtWidgets.QMainWindow):
         """Saves the settings for the application."""
         self.settings.beginGroup("General Settings")
         self.settings.setValue("logging_level", self.logging_level)
-        self.settings.setValue("database_setup", self.database_setup_completed)
+        self.settings.setValue(
+            "database_setup_completed", self.database_setup_completed
+        )
         self.settings.endGroup()
 
         self.settings.beginGroup("CutList MySQL")
@@ -558,12 +588,12 @@ class MainWindow(Ui_MainWindow, QtWidgets.QMainWindow):
 
         self.headers = utilities.get_max_column_widths(_table_data, self.headers)
 
-        if progress_data_signal:
-            progress_data_signal.emit("Retreiving SO data...")
+        if signals.progress_data:
+            signals.progress_data.emit("Retreiving SO data...")
 
         for row_index, row in enumerate(_table_data, 1):
-            if progress_signal:
-                progress_signal.emit(int(row_index / len(_table_data) * 100))
+            if signals.progress:
+                signals.progress.emit(int(row_index / len(_table_data) * 100))
 
             is_child_item = row.pop("is_child_item")
             sales_order_item = SalesOrderItem.from_id(
@@ -653,6 +683,11 @@ class MainWindow(Ui_MainWindow, QtWidgets.QMainWindow):
         self.progressBar.setValue(0)
         self.progressBar.hide()
 
+    def log_tread_error(self, exctype, value, error: traceback):
+        """ "Logs an error from a worker thread."""
+        self.logger.error(f"{exctype}: {value}")
+        self.logger.error(error)
+
     def thread_get_current_fb_data(self):
         def set_updating_fishbowl_data(value: bool):
             self.updating_fishbowl_data = value
@@ -695,6 +730,7 @@ class MainWindow(Ui_MainWindow, QtWidgets.QMainWindow):
         worker.signals.result.connect(self.show_fishbowl_update_finished_message_box)
         worker.signals.progress.connect(self.update_progess_bar_value)
         worker.signals.progress_data.connect(self.set_progress_bar_text)
+        worker.signals.error.connect(self.log_tread_error)
 
         self.progressBar.show()
         self.progressBar.setValue(0)
@@ -725,6 +761,8 @@ class MainWindow(Ui_MainWindow, QtWidgets.QMainWindow):
         worker.signals.result.connect(self.load_so_table_data)
         worker.signals.progress.connect(self.update_progess_bar_value)
         worker.signals.progress_data.connect(self.set_progress_bar_text)
+        worker.signals.error.connect(self.log_tread_error)
+
         self.progressBar.show()
         self.progressBar.setValue(0)
         self.threadpool.start(worker)

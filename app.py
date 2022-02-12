@@ -36,7 +36,6 @@ root_logger = logging.getLogger("root")
 # username = "gone"
 # password = "fishing"
 
-
 fishbowl_orm = fishbowlorm.FishbowlORM(
     db_name=FISHBOWL_DATABASE_SCHEMA,
     host=FISHBOWL_DATABASE_HOST,
