@@ -172,11 +172,13 @@ def create_sales_orders_from_fishbowl_data(
 
 
 def prosess_child_fishbowl_parts(session: session_type_hint, sales_order: SalesOrder, sales_order_item: SalesOrderItem, fb_so_item: fb_models.FBSalesOrderItem, fb_child_parts: list[fb_models.FBPart]):
+    parent_part = sales_order_item.part
     for index, fb_child_part in enumerate(fb_child_parts):
         backend_logger.debug(f"Processing child part {fb_child_part}.")
         child_part = Part.find_by_number(fb_child_part.number)
         if child_part is None:
             child_part = Part.from_fishbowl_part(fb_child_part)
+            child_part.set_parent(parent_part)
 
         line_number = f"{fb_so_item.lineItem}.{index + 1}"
         child_sales_order_item = SalesOrderItem.find_by_fishbowl_so_item_id_line_number(fb_so_item.id, line_number)

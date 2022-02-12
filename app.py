@@ -470,12 +470,12 @@ class MainWindow(QtWidgets.QMainWindow):
                         so.number,
                         item.line_number,
                         item.part.number,
-                        item.description,
+                        item.part.description,
                         str(int(item.quantity_left_to_fulfill)),
                         item.has_cut_job_item_string,
                         item.fully_cut,
-                        item.parent_item.part.number if item.parent_item else "",
-                        item.parent_item.part.description if item.parent_item else "",
+                        item.part.parent.number if item.part.parent else "",
+                        item.part.parent.description if item.part.parent else "",
                     ]
                 )
 
