@@ -25,6 +25,7 @@ from cutlistgenerator.ui.dialogs import (
     CutJobEditorDialog,
     DueDatePushbackEditorDialog,
 )
+from cutlistgenerator.update import check_for_updates
 
 
 frontend_logger = logging.getLogger("frontend")
@@ -107,7 +108,7 @@ class WorkerSignals(QObject):
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(PROGRAM_NAME)
+        self.setWindowTitle(f"{PROGRAM_NAME} v{PROGRAM_VERSION}")
         self.resize(800, 600)
         self.setup_ui()
         self.connect_signals()
@@ -478,4 +479,5 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
     window.show()
+    check_for_updates()
     sys.exit(app.exec_())
