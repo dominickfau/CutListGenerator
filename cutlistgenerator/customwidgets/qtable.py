@@ -22,7 +22,6 @@ class CustomQTableWidget(QtWidgets.QTableWidget):
         self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
 
         self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.show_row_context_menu)
         self.horizontalHeader().setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.horizontalHeader().customContextMenuRequested.connect(
             self.show_header_context_menu
@@ -106,11 +105,6 @@ class CustomQTableWidget(QtWidgets.QTableWidget):
     def resize_all_columns(self):
         for column in range(self.columnCount()):
             self.resizeColumnToContents(column)
-
-    def show_row_context_menu(self, pos):
-        menu = QtWidgets.QMenu()
-        menu.addAction("Copy", self.copy_selected_rows)
-        menu.exec_(self.mapToGlobal(pos))
 
     def copy_selected_rows(self):
         rows = self.selectionModel().selectedRows()

@@ -16,10 +16,15 @@ from cutlistgenerator import (
 )
 from cutlistgenerator.database import global_session
 from cutlistgenerator.database.models.salesorder import SalesOrder, SalesOrderItem
+from cutlistgenerator.database.models.part import Part
 from cutlistgenerator.settings import *
 from cutlistgenerator import utilities
 from cutlistgenerator.customwidgets.qtable import CustomQTableWidget
-from cutlistgenerator.ui.dialogs import CustomerNameConverterDialog, CutJobEditorDialog
+from cutlistgenerator.ui.dialogs import (
+    CustomerNameConverterDialog,
+    CutJobEditorDialog,
+    DueDatePushbackEditorDialog,
+)
 
 
 frontend_logger = logging.getLogger("frontend")
@@ -43,6 +48,7 @@ fishbowl_orm = fishbowlorm.FishbowlORM(
 
 COLUMNS = [
     "Due Date",
+    "Cut By Date",
     "Customer",
     "SO Number",
     "Line Number",
@@ -185,6 +191,13 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         self.file_menu.addAction(self.open_customer_name_converter_action)
 
+        self.open_due_date_push_back_action = QtWidgets.QAction(self)
+        self.open_due_date_push_back_action.setText("Due Date Push Back")
+        self.open_due_date_push_back_action.triggered.connect(
+            self.open_due_date_push_back_dialog
+        )
+        self.file_menu.addAction(self.open_due_date_push_back_action)
+
         self.exit_action = QtWidgets.QAction(self)
         self.exit_action.setText("Exit")
         self.exit_action.triggered.connect(self.close)
@@ -200,6 +213,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.update_fishbowl_data_action.triggered.connect(self.update_fishbowl_data)
         self.fishbowl_menu.addAction(self.update_fishbowl_data_action)
 
+        self.edit_excluded_parts_action = QtWidgets.QAction(self)
+        self.edit_excluded_parts_action.setText("Edit Excluded Parts")
+        # self.edit_excluded_parts_action.triggered.connect(self.edit_excluded_parts) # TODO: Implement
+        self.fishbowl_menu.addAction(self.edit_excluded_parts_action)
+
         self.menubar.addAction(self.fishbowl_menu.menuAction())
 
         self.wire_cutter_menu = QtWidgets.QMenu(self.menubar)
@@ -207,17 +225,57 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.new_wire_cutter_action = QtWidgets.QAction(self)
         self.new_wire_cutter_action.setText("New Wire Cutter")
-        # self.new_wire_cutter_action.triggered.connect(self.new_wire_cutter)
+        # self.new_wire_cutter_action.triggered.connect(self.new_wire_cutter) # TODO: Implement
         self.wire_cutter_menu.addAction(self.new_wire_cutter_action)
 
         self.edit_wire_cutter_action = QtWidgets.QAction(self)
         self.edit_wire_cutter_action.setText("Edit Wire Cutter")
-        # self.edit_wire_cutter_action.triggered.connect(self.edit_wire_cutter)
+        # self.edit_wire_cutter_action.triggered.connect(self.edit_wire_cutter) # TODO: Implement
         self.wire_cutter_menu.addAction(self.edit_wire_cutter_action)
 
         self.menubar.addAction(self.wire_cutter_menu.menuAction())
 
         self.setMenuBar(self.menubar)
+
+    # This line keeps black magic from happening.
+    # fmt: off
+    def show_table_row_context_menu(self, pos: QtCore.QPoint):
+        """Show the context menu for the selected row."""
+        menu = QtWidgets.QMenu()
+        menu.addAction("Exclude From Import", self.on_excluded_from_import_clicked)
+        menu.addAction("Change Due Date Pushback", self.on_change_due_date_push_back_clicked)
+        menu.addAction("Copy", self.so_table_widget.copy_selected_rows)
+        menu.exec_(self.so_table_widget.mapToGlobal(pos))
+    # This line restarts the black magic.
+    # fmt: on
+
+    def on_change_due_date_push_back_clicked(self):
+        selected_row = self.so_table_widget.currentRow()
+        if selected_row == -1:
+            return
+        part_number = self.so_table_widget.item(
+            selected_row, COLUMNS.index("Part Number")
+        ).text()
+        part = Part.find_by_number(part_number)
+        if not part:
+            return
+        self.open_due_date_push_back_dialog(part)
+
+    def open_due_date_push_back_dialog(self, part: Part = None):
+        dialog = DueDatePushbackEditorDialog(part, parent=self)
+        dialog.exec()
+
+    def on_excluded_from_import_clicked(self):
+        selected_row = self.so_table_widget.currentRow()
+        if selected_row == -1:
+            return
+        part_number = self.so_table_widget.item(
+            selected_row, COLUMNS.index("Part Number")
+        ).text()
+        part = Part.find_by_number(part_number)
+        if not part:
+            return
+        self.excluded_part_from_import(part)
 
     def setup_statusbar(self):
         self.statusbar = QtWidgets.QStatusBar(self)
@@ -239,10 +297,62 @@ class MainWindow(QtWidgets.QMainWindow):
         dialog = CustomerNameConverterDialog(self)
         dialog.exec()
 
+    def excluded_part_from_import(self, part: Part):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Question)
+        msg.setWindowTitle("Add to Exclude List")
+        msg.setText(f"Are you sure you want to add {part.number} to the exclude list?")
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg.setDefaultButton(QMessageBox.Yes)
+        ret = msg.exec()
+        if ret == QMessageBox.No:
+            return
+
+        frontend_logger.info(f"Adding {part.number} to exclude list.")
+        part.set_excluded_from_import(True)
+
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Question)
+        msg.setWindowTitle("Update Sales Orders")
+        msg.setText(f"{part.number} has been added to the exclude list.")
+        msg.setInformativeText(
+            "Do you want to remove this product from all sales orders?"
+        )
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg.setDefaultButton(QMessageBox.Yes)
+        ret = msg.exec()
+        if ret == QMessageBox.No:
+            return
+
+        # Double check that the user is sure.
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Warning)
+        msg.setWindowTitle("Remove Sales Order Items")
+        msg.setText(
+            f"Are you sure you want to remove all sales order items for {part.number}?"
+        )
+        msg.setInformativeText(
+            "This action cannot be undone! This action will remove all sales order items for this product from all sales orders."
+        )
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg.setDefaultButton(QMessageBox.No)
+        ret = msg.exec()
+        if ret == QMessageBox.No:
+            return
+
+        # Remove all items from all sales orders.
+        frontend_logger.warning(f"Removing all sales order items for {part.number}.")
+
+        total = SalesOrderItem.remove_part_from_all_items(part)
+        frontend_logger.info(f"Removed {total} sales order items for {part.number}.")
+        self.reload_so_table()
+
     def on_so_table_row_double_clicked(self, row: QtWidgets.QTableWidgetItem):
         index = row.row()
-        so_number = self.so_table_widget.item(index, 2).text()
-        line_number = self.so_table_widget.item(index, 3).text()
+        so_number = self.so_table_widget.item(index, COLUMNS.index("SO Number")).text()
+        line_number = self.so_table_widget.item(
+            index, COLUMNS.index("Line Number")
+        ).text()
         sales_order_item = SalesOrderItem.find_by_so_number_line_number(
             so_number=so_number, line_number=line_number
         )
@@ -270,6 +380,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.so_table_widget.doubleClicked.connect(self.on_so_table_row_double_clicked)
         self.so_table_widget.selectionModel().selectionChanged.connect(
             self.on_so_table_selection_changed
+        )
+        self.so_table_widget.customContextMenuRequested.connect(
+            self.show_table_row_context_menu
         )
         # self.view_selected_so_button.clicked.connect(self.view_selected_so)
 
@@ -319,9 +432,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dissable()
         self.threadpool.start(worker)
 
-    def reload_so_table(self, search_criteria: SalesOrderSearchCriteria = None):
+    def reload_so_table(self):
         self.so_table_widget.setRowCount(0)
         self.table_data = SalesOrder.find_all_unfinished()
+        search_criteria = None  # TODO: Implement search criteria.
 
         # "Due Date",
         # "Customer",
@@ -342,6 +456,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 data.append(
                     [
                         item.date_scheduled_fulfillment.strftime(DATE_FORMAT),
+                        item.pushed_back_due_date.strftime(DATE_FORMAT),
                         so.customer.name_converted,
                         so.number,
                         item.line_number,

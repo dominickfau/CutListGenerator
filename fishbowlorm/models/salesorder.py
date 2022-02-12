@@ -185,6 +185,9 @@ class FBSalesOrderItem(Base):
     uomId = Column(Integer, ForeignKey('uom.id'))
     uomObj = relationship('FBUom', foreign_keys=[uomId]) # type: FBUom
 
+    def __str__(self) -> str:
+        return f"{self.id}-{self.lineItem}: {self.productObj.number}"
+
     @property
     def quantityToFulfill(self) -> Decimal:
         """Returns the quantity to fulfill."""

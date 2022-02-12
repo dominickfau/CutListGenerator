@@ -33,9 +33,9 @@ dictConfig(
                 "backupCount": MAX_LOG_COUNT,
                 "formatter": "default",
             },
-            "flask_log_file": {
+            "api_log_file": {
                 "class": "logging.handlers.RotatingFileHandler",
-                "filename": os.path.join(LOG_FOLDER, FRONT_END_LOG_FILE),
+                "filename": os.path.join(LOG_FOLDER, API_LOG_FILE),
                 "maxBytes": MAX_LOG_SIZE_MB * 1024 * 1024,
                 "backupCount": MAX_LOG_COUNT,
                 "formatter": "default",
@@ -55,9 +55,9 @@ dictConfig(
                 "level": LOG_LEVEL,
                 "handlers": ["frontend_log_file", "console"],
             },
-            "flask": {
+            "api": {
                 "level": LOG_LEVEL,
-                "handlers": ["flask_log_file", "console"],
+                "handlers": ["api_log_file", "console"],
             },
         },
     }

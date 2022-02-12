@@ -261,10 +261,14 @@ class SalesOrderItem(Base, Auditing):
         "SalesOrderItemType", foreign_keys=[type_id]
     )  # type: SalesOrderItemType
 
+    def __str__(self) -> str:
+        return f"{self.id}-{self.line_number}: {self.part.number}"
+
     def to_dict(self) -> dict:
         result = {}
         for column in self.__table__.columns:
             result[column.name] = str(getattr(self, column.name))
+        result["pushed_back_due_date"] = self.pushed_back_due_date.strftime("%Y-%m-%d")
         result["parent_item"] = self.parent_item.to_dict() if self.parent_item else None
         result["part"] = self.part.to_dict()
         result["status"] = self.status.to_dict()
@@ -282,6 +286,12 @@ class SalesOrderItem(Base, Auditing):
             global_session.query(SalesOrder)
             .filter(SalesOrder.id == self.sales_order_id)
             .first()
+        )
+
+    @property
+    def pushed_back_due_date(self) -> datetime.datetime:
+        return self.date_scheduled_fulfillment - datetime.timedelta(
+            days=self.part.due_date_push_back_days
         )
 
     @property
@@ -359,3 +369,18 @@ class SalesOrderItem(Base, Auditing):
             )
             .first()
         )
+
+    @staticmethod
+    def remove_part_from_all_items(part: Part) -> int:
+        """Removes the part from all sales order items."""
+        so_items = (
+            global_session.query(SalesOrderItem)
+            .filter(SalesOrderItem.part_id == part.id)
+            .all()
+        )
+        total = 0
+        for item in so_items:
+            total += 1
+            global_session.delete(item)
+        global_session.commit()
+        return total

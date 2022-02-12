@@ -627,14 +627,14 @@ class CutJobItemEditorDialog(QtWidgets.QDialog):
 
         self.quantity_to_cut_spin_box = QtWidgets.QSpinBox()
         self.quantity_to_cut_spin_box.setMinimum(0)
-        self.quantity_to_cut_spin_box.setMaximum(1000000)
+        self.quantity_to_cut_spin_box.setMaximum(1_000_000)
         self.quantity_to_cut_spin_box.setButtonSymbols(
             QtWidgets.QAbstractSpinBox.NoButtons
         )
 
         self.quantity_cut_spin_box = QtWidgets.QSpinBox()
         self.quantity_cut_spin_box.setMinimum(0)
-        self.quantity_cut_spin_box.setMaximum(1000000)
+        self.quantity_cut_spin_box.setMaximum(1_000_000)
         self.quantity_cut_spin_box.setButtonSymbols(
             QtWidgets.QAbstractSpinBox.NoButtons
         )
@@ -722,3 +722,84 @@ class CutJobItemEditorDialog(QtWidgets.QDialog):
             self.cut_job_item.save()
 
         self.close()
+
+
+class DueDatePushbackEditorDialog(QtWidgets.QDialog):
+    def __init__(
+        self,
+        part: Part = None,
+        parent=None,
+    ):
+        super().__init__(parent)
+
+        self.resize(300, 100)
+
+        self.setWindowTitle("Due Date Pushback Editor")
+        self.keyPressEvent = self.key_pressed_event
+
+        self.part = part
+
+        self.create_widgets()
+        self.create_layout()
+        self.create_connections()
+
+        if self.part:
+            self.part_combo_box.setCurrentIndex(self.part_combo_box.findData(self.part))
+        else:
+            self.on_part_combo_box_current_index_changed()
+
+    def key_pressed_event(self, event):
+        if event.key() == Qt.Key_Escape:
+            self.close()
+
+    def create_widgets(self):
+        self.part_combo_box = QtWidgets.QComboBox()
+
+        parts = Part.find_all()
+
+        for part in parts:
+            self.part_combo_box.addItem(part.number, part)
+
+        self.due_date_pushback_spin_box = QtWidgets.QSpinBox()
+        self.due_date_pushback_spin_box.setMinimum(0)
+        self.due_date_pushback_spin_box.setMaximum(1_000_000)
+        self.due_date_pushback_spin_box.setButtonSymbols(
+            QtWidgets.QAbstractSpinBox.NoButtons
+        )
+
+        self.save_button = QtWidgets.QPushButton("Save")
+
+    def create_layout(self):
+        layout = QtWidgets.QVBoxLayout()
+
+        form_layout = QtWidgets.QFormLayout()
+        form_layout.addRow("Part", self.part_combo_box)
+        form_layout.addRow("Due Date Pushback", self.due_date_pushback_spin_box)
+
+        layout.addLayout(form_layout)
+        layout.addWidget(self.save_button)
+
+        self.setLayout(layout)
+
+    def create_connections(self):
+        self.save_button.clicked.connect(self.on_save_button_clicked)
+        self.part_combo_box.currentIndexChanged.connect(
+            self.on_part_combo_box_current_index_changed
+        )
+        self.due_date_pushback_spin_box.editingFinished.connect(
+            self.on_due_date_pushback_spin_box_editing_finished
+        )
+
+    def on_part_combo_box_current_index_changed(self):
+        self.part = self.part_combo_box.currentData()
+        self.due_date_pushback_spin_box.setValue(self.part.due_date_push_back_days)
+
+    def on_due_date_pushback_spin_box_editing_finished(self):
+        self.save()
+
+    def on_save_button_clicked(self):
+        self.save()
+
+    def save(self):
+        days = self.due_date_pushback_spin_box.value()
+        self.part.set_due_date_push_back_days(days)

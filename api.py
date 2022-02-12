@@ -22,7 +22,7 @@ from cutlistgenerator.database.models.user import User
 from cutlistgenerator.settings import API_TOKEN_VALIDITY, FLASK_SECRET_KEY
 
 
-logger = logging.getLogger("flask")
+logger = logging.getLogger("api")
 
 
 flask_app = Flask(__name__)

@@ -109,3 +109,20 @@ class WireCutter(Base, Auditing):
     def find_all() -> list[WireCutter]:
         """Returns all wire cutters."""
         return global_session.query(WireCutter).all()
+
+    @staticmethod
+    def create_default_data():
+        """Creates the default data for the database."""
+        data = [WireCutter(id=1, name="Test Cutter", max_wire_size_id=1)]
+
+        for item in data:
+            x = (
+                global_session.query(WireCutter)
+                .filter(WireCutter.id == item.id)
+                .first()
+            )
+            if x:
+                continue
+            global_session.add(item)
+            backend_logger.info(f"Creating {item}")
+        global_session.commit()
