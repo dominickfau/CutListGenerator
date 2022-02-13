@@ -688,7 +688,7 @@ class CutJobItemEditorDialog(QtWidgets.QDialog):
     def on_quantity_cut_spin_box_value_changed(self):
         qty_cut = self.quantity_cut_spin_box.value()
         qty_to_cut = self.quantity_to_cut_spin_box.value()
-        if qty_cut == qty_to_cut:
+        if qty_cut >= qty_to_cut:
             self.item_status_combo_box.setCurrentIndex(
                 self.item_status_combo_box.findData(
                     CutJobItemStatus.find_by_name("Fulfilled")
@@ -901,7 +901,6 @@ class WireCutterEditorDialog(QtWidgets.QDialog):
 
         self.create_widgets()
         self.create_layout()
-        
 
         wire_cutters = WireCutter.find_all()
         wire_sizes = WireSize.find_all()
@@ -910,7 +909,7 @@ class WireCutterEditorDialog(QtWidgets.QDialog):
 
         for wire_cutter in wire_cutters:
             self.wire_cutter_combo_box.addItem(wire_cutter.name, wire_cutter)
-        
+
         self.create_connections()
 
         self.wire_cutter_combo_box.setCurrentIndex(0)
@@ -924,6 +923,7 @@ class WireCutterEditorDialog(QtWidgets.QDialog):
         self.name_line_edit = QtWidgets.QLineEdit()
         self.max_wire_size_combo_box = QtWidgets.QComboBox()
         self.max_possessing_time_spin_box = QtWidgets.QSpinBox()
+        self.max_possessing_time_spin_box.setRange(1, 100_000)
         self.description_line_edit = QtWidgets.QLineEdit()
         self.details_text_edit = QtWidgets.QTextEdit()
 
