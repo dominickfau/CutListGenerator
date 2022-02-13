@@ -28,6 +28,8 @@ from cutlistgenerator.ui.dialogs import (
     CustomerNameConverterDialog,
     CutJobEditorDialog,
     DueDatePushbackEditorDialog,
+    ExcludedPartsEditorDialog,
+    WireCutterEditorDialog,
 )
 from cutlistgenerator.update import check_for_updates
 
@@ -51,6 +53,7 @@ fishbowl_orm = fishbowlorm.FishbowlORM(
 
 
 COLUMNS = [
+    "Id",
     "Due Date",
     "Cut By Date",
     "Customer",
@@ -219,7 +222,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.edit_excluded_parts_action = QtWidgets.QAction(self)
         self.edit_excluded_parts_action.setText("Edit Excluded Parts")
-        # self.edit_excluded_parts_action.triggered.connect(self.edit_excluded_parts) # TODO: Implement
+        self.edit_excluded_parts_action.triggered.connect(self.edit_excluded_parts)
         self.fishbowl_menu.addAction(self.edit_excluded_parts_action)
 
         self.menubar.addAction(self.fishbowl_menu.menuAction())
@@ -227,15 +230,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.wire_cutter_menu = QtWidgets.QMenu(self.menubar)
         self.wire_cutter_menu.setTitle("Wire Cutter")
 
-        self.new_wire_cutter_action = QtWidgets.QAction(self)
-        self.new_wire_cutter_action.setText("New Wire Cutter")
-        # self.new_wire_cutter_action.triggered.connect(self.new_wire_cutter) # TODO: Implement
-        self.wire_cutter_menu.addAction(self.new_wire_cutter_action)
-
-        self.edit_wire_cutter_action = QtWidgets.QAction(self)
-        self.edit_wire_cutter_action.setText("Edit Wire Cutter")
-        # self.edit_wire_cutter_action.triggered.connect(self.edit_wire_cutter) # TODO: Implement
-        self.wire_cutter_menu.addAction(self.edit_wire_cutter_action)
+        self.open_wire_cutter_editor_action = QtWidgets.QAction(self)
+        self.open_wire_cutter_editor_action.setText("Edit Wire Cutters")
+        self.open_wire_cutter_editor_action.triggered.connect(self.edit_wire_cutter)
+        self.wire_cutter_menu.addAction(self.open_wire_cutter_editor_action)
 
         self.menubar.addAction(self.wire_cutter_menu.menuAction())
 
@@ -253,6 +251,15 @@ class MainWindow(QtWidgets.QMainWindow):
         menu.exec_(self.so_table_widget.mapToGlobal(pos))
     # This line restarts the black magic.
     # fmt: on
+
+    def edit_wire_cutter(self):
+        dialog = WireCutterEditorDialog(parent=self)
+        dialog.exec_()
+
+    def edit_excluded_parts(self, part: Part = None):
+        """Edit the list of excluded parts."""
+        dialog = ExcludedPartsEditorDialog(part=part, parent=self)
+        dialog.exec_()
 
     def on_change_due_date_push_back_clicked(self):
         selected_row = self.so_table_widget.currentRow()
@@ -377,6 +384,17 @@ class MainWindow(QtWidgets.QMainWindow):
             line_number = self.so_table_widget.item(index, COLUMNS.index("Line Number")).text()
             sales_order_item = SalesOrderItem.find_by_so_number_line_number(so_number=so_number, line_number=line_number)
             sales_order_items.append(sales_order_item)
+        
+        for item in sales_order_items[:]:
+            if item.cut_job_item:
+                message_box = QMessageBox()
+                message_box.setIcon(QMessageBox.Warning)
+                message_box.setWindowTitle("Cut Job Already Exists")
+                message_box.setText(f"SO Number: {item.sales_order.number} Line Number: {item.line_number} already has a cut job.")
+                message_box.setInformativeText("Sales order items can only be linked to one cut job at a time. Please remove this line from your selection and try again.")
+                message_box.setStandardButtons(QMessageBox.Ok)
+                message_box.exec()
+                return
         
         dialog = CutJobEditorDialog(sales_order_items=sales_order_items, parent=self)
         dialog.exec()
@@ -506,9 +524,15 @@ class MainWindow(QtWidgets.QMainWindow):
         results = query.all()
 
         data = []
+        index = 1
+        total_rows = len(results)
+        id_row_max_chars = len(str(total_rows))
         for sales_order, customer, sales_order_item, part in results:
+            index_string = str(index)
+            index_string = utilities.pad_string(index_string, id_row_max_chars)
             data.append(
                 [
+                    index_string,
                     sales_order_item.date_scheduled_fulfillment.strftime(DATE_FORMAT),
                     sales_order_item.pushed_back_due_date.strftime(DATE_FORMAT),
                     customer.name_converted,
@@ -523,6 +547,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     part.parent.description if part.parent else "",
                 ]
             )
+            index += 1
 
         for row in data:
             self.so_table_widget.insert_row_data(row)

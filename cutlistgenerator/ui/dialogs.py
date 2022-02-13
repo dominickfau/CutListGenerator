@@ -6,7 +6,6 @@ from PyQt5.QtCore import Qt, QDate
 from PyQt5.QtGui import QCloseEvent, QKeyEvent
 from cutlistgenerator import errors
 from cutlistgenerator import LAST_USERNAME
-from cutlistgenerator.settings import DATE_FORMAT
 from cutlistgenerator.customwidgets.qtable import CustomQTableWidget
 from cutlistgenerator.utilities import clean_text_input
 from cutlistgenerator.database import Session, global_session
@@ -20,7 +19,7 @@ from cutlistgenerator.database.models.cutjob import (
     CutJobStatus,
     CutJobItemStatus,
 )
-from cutlistgenerator.database.models.wirecutter import WireCutter
+from cutlistgenerator.database.models.wirecutter import WireCutter, WireSize
 
 
 backend_logger = logging.getLogger("backend")
@@ -810,3 +809,202 @@ class DueDatePushbackEditorDialog(QtWidgets.QDialog):
     def save(self):
         days = self.due_date_pushback_spin_box.value()
         self.part.set_due_date_push_back_days(days)
+
+
+class ExcludedPartsEditorDialog(QtWidgets.QDialog):
+    def __init__(
+        self,
+        part: Part = None,
+        parent=None,
+    ):
+        super().__init__(parent)
+
+        self.resize(300, 100)
+
+        self.setWindowTitle("Excluded Parts Editor")
+        self.keyPressEvent = self.key_pressed_event
+
+        self.part = part
+
+        self.create_widgets()
+        self.create_layout()
+        self.create_connections()
+
+        if self.part:
+            self.part_combo_box.setCurrentIndex(self.part_combo_box.findData(self.part))
+        else:
+            self.on_part_combo_box_current_index_changed()
+
+    def key_pressed_event(self, event):
+        if event.key() == Qt.Key_Escape:
+            self.close()
+
+    def create_widgets(self):
+        self.part_combo_box = QtWidgets.QComboBox()
+
+        parts = Part.find_all()
+
+        for part in parts:
+            self.part_combo_box.addItem(part.number, part)
+
+        self.excluded_part_check_box = QtWidgets.QCheckBox()
+        self.excluded_part_check_box.setText("Exclude From Import")
+
+        self.save_button = QtWidgets.QPushButton("Save")
+
+    def create_layout(self):
+        layout = QtWidgets.QVBoxLayout()
+
+        form_layout = QtWidgets.QFormLayout()
+        form_layout.addRow("Part", self.part_combo_box)
+
+        layout.addLayout(form_layout)
+        layout.addWidget(self.excluded_part_check_box)
+        layout.addWidget(self.save_button)
+
+        self.setLayout(layout)
+
+    def create_connections(self):
+        self.save_button.clicked.connect(self.on_save_button_clicked)
+        self.part_combo_box.currentIndexChanged.connect(
+            self.on_part_combo_box_current_index_changed
+        )
+        self.excluded_part_check_box.stateChanged.connect(
+            self.on_excluded_part_check_box_state_changed
+        )
+
+    def on_part_combo_box_current_index_changed(self):
+        self.part = self.part_combo_box.currentData()
+        self.excluded_part_check_box.setChecked(self.part.excluded_from_import)
+
+    def on_excluded_part_check_box_state_changed(self):
+        self.save()
+
+    def on_save_button_clicked(self):
+        self.save()
+
+    def save(self):
+        excluded = self.excluded_part_check_box.isChecked()
+        self.part.set_excluded_from_import(excluded)
+
+
+class WireCutterEditorDialog(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # self.resize(300, 100)
+
+        self.setWindowTitle("Wire Cutter Editor")
+        self.keyPressEvent = self.key_pressed_event
+
+        self.wire_cutter = None  # type: WireCutter
+
+        self.create_widgets()
+        self.create_layout()
+        
+
+        wire_cutters = WireCutter.find_all()
+        wire_sizes = WireSize.find_all()
+        for wire_size in wire_sizes:
+            self.max_wire_size_combo_box.addItem(wire_size.name, wire_size)
+
+        for wire_cutter in wire_cutters:
+            self.wire_cutter_combo_box.addItem(wire_cutter.name, wire_cutter)
+        
+        self.create_connections()
+
+        self.wire_cutter_combo_box.setCurrentIndex(0)
+
+    def key_pressed_event(self, event):
+        if event.key() == Qt.Key_Escape:
+            self.close()
+
+    def create_widgets(self):
+        self.wire_cutter_combo_box = QtWidgets.QComboBox()
+        self.name_line_edit = QtWidgets.QLineEdit()
+        self.max_wire_size_combo_box = QtWidgets.QComboBox()
+        self.max_possessing_time_spin_box = QtWidgets.QSpinBox()
+        self.description_line_edit = QtWidgets.QLineEdit()
+        self.details_text_edit = QtWidgets.QTextEdit()
+
+        self.save_button = QtWidgets.QPushButton("Save")
+        self.new_button = QtWidgets.QPushButton("New")
+
+    def create_layout(self):
+        layout = QtWidgets.QVBoxLayout()
+
+        form_layout = QtWidgets.QFormLayout()
+        h_layout = QtWidgets.QHBoxLayout()
+        h_layout.addWidget(self.wire_cutter_combo_box, stretch=1)
+        h_layout.addWidget(self.new_button)
+        form_layout.addRow("Wire Cutter", h_layout)
+        form_layout.addRow("Name", self.name_line_edit)
+        form_layout.addRow("Max Wire Size", self.max_wire_size_combo_box)
+        form_layout.addRow("Max Possessing Time", self.max_possessing_time_spin_box)
+        form_layout.addRow("Description", self.description_line_edit)
+        form_layout.addRow("Details", self.details_text_edit)
+
+        layout.addLayout(form_layout)
+        layout.addWidget(self.save_button)
+
+        self.setLayout(layout)
+
+    # fmt: off
+    def create_connections(self):
+        self.wire_cutter_combo_box.currentIndexChanged.connect(self.on_wire_cutter_combo_box_current_index_changed)
+        self.name_line_edit.editingFinished.connect(self.on_name_line_edit_editing_finished)
+        self.max_wire_size_combo_box.currentIndexChanged.connect(self.on_max_wire_size_combo_box_current_index_changed)
+        self.max_possessing_time_spin_box.editingFinished.connect(self.on_max_possessing_time_spin_box_editing_finished)
+        self.description_line_edit.editingFinished.connect(self.on_description_line_edit_editing_finished)
+        self.details_text_edit.textChanged.connect(self.on_details_text_edit_text_changed)
+        self.save_button.clicked.connect(self.on_save_button_clicked)
+        self.new_button.clicked.connect(self.on_new_button_clicked)
+
+    def on_wire_cutter_combo_box_current_index_changed(self):
+        self.wire_cutter = self.wire_cutter_combo_box.currentData()
+        self.name_line_edit.setText(self.wire_cutter.name)
+        self.max_wire_size_combo_box.setCurrentIndex(self.max_wire_size_combo_box.findData(self.wire_cutter.max_wire_size))
+        self.max_possessing_time_spin_box.setValue(self.wire_cutter.max_processing_speed_feet_per_minute)
+        self.description_line_edit.setText(self.wire_cutter.description)
+        self.details_text_edit.setText(self.wire_cutter.details)
+    
+    def on_name_line_edit_editing_finished(self):
+        self.save()
+    
+    def on_max_wire_size_combo_box_current_index_changed(self):
+        self.save()
+    
+    def on_max_possessing_time_spin_box_editing_finished(self):
+        self.save()
+    
+    def on_description_line_edit_editing_finished(self):
+        self.save()
+    
+    def on_details_text_edit_text_changed(self):
+        self.save()
+    
+    def on_save_button_clicked(self):
+        self.save()
+    
+    def on_new_button_clicked(self):
+        self.wire_cutter = WireCutter.create(name="New Cutter", max_wire_size=WireSize.find_by_name("8 AWG"))
+        self.wire_cutter_combo_box.addItem(self.wire_cutter.name, self.wire_cutter)
+        self.wire_cutter_combo_box.setCurrentIndex(self.wire_cutter_combo_box.findData(self.wire_cutter))
+        self.name_line_edit.setText(self.wire_cutter.name)
+        self.max_wire_size_combo_box.setCurrentIndex(self.max_wire_size_combo_box.findData(self.wire_cutter.max_wire_size))
+        self.max_possessing_time_spin_box.setValue(self.wire_cutter.max_processing_speed_feet_per_minute)
+        self.description_line_edit.setText(self.wire_cutter.description)
+        self.details_text_edit.setText(self.wire_cutter.details)
+    
+    def save(self):
+        index = self.wire_cutter_combo_box.currentIndex()
+        self.wire_cutter.name = self.name_line_edit.text()
+        self.wire_cutter.max_wire_size = self.max_wire_size_combo_box.currentData()
+        self.wire_cutter.max_processing_speed_feet_per_minute = self.max_possessing_time_spin_box.value()
+        self.wire_cutter.description = self.description_line_edit.text()
+        self.wire_cutter.details = self.details_text_edit.toPlainText()
+        self.wire_cutter.save()
+        self.wire_cutter_combo_box.setItemText(index, self.wire_cutter.name)
+        self.wire_cutter_combo_box.setItemData(index, self.wire_cutter)
+
+    # fmt: on

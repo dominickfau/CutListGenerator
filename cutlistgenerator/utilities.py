@@ -271,3 +271,8 @@ def remove_hidden_columns(table_widget: CustomQTableWidget):
         table_widget.header_context_menu.actions()[index + 1].setChecked(
             False
         )  # Add 1 to the index because table columns start at 0.
+
+
+def pad_string(string: str, length: int, pad_char: str = " ") -> str:
+    """Pad a string to a certain length."""
+    return string.rjust(length, pad_char)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import datetime
 import logging
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, DECIMAL, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Boolean
 from sqlalchemy.orm import backref, relationship
 from cutlistgenerator.database import Auditing, Base, Status, global_session
 from cutlistgenerator.database.models.customer import Customer
@@ -249,10 +249,10 @@ class SalesOrderItem(Base, Auditing):
     )  # type: SalesOrderItem
     part_id = Column(Integer, ForeignKey("part.id"), index=True)
     part = relationship("Part", foreign_keys=[part_id])  # type: Part
-    quantity_fulfilled = Column(DECIMAL(28, 9), nullable=False)
-    quantity_ordered = Column(DECIMAL(28, 9), nullable=False)
-    quantity_picked = Column(DECIMAL(28, 9), nullable=False)
-    quantity_to_fulfill = Column(DECIMAL(28, 9), nullable=False)
+    quantity_fulfilled = Column(Float, nullable=False)
+    quantity_ordered = Column(Float, nullable=False)
+    quantity_picked = Column(Float, nullable=False)
+    quantity_to_fulfill = Column(Float, nullable=False)
     sales_order_id = Column(Integer, ForeignKey("sales_order.id"), index=True)
     sales_order = relationship(
         "SalesOrder", foreign_keys=[sales_order_id], back_populates="items"

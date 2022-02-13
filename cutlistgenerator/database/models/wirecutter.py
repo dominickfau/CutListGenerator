@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
-from sqlalchemy import Column, Integer, String, ForeignKey, DECIMAL
+import datetime
+from sqlalchemy import Column, Integer, String, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from cutlistgenerator.database import Base, Auditing, global_session
 
@@ -28,6 +29,11 @@ class WireSize(Base):
     def find_by_name(name: str) -> WireSize:
         """Find a wire size by name."""
         return global_session.query(WireSize).filter(WireSize.name == name).first()
+
+    @staticmethod
+    def find_all() -> list[WireSize]:
+        """Find all wire sizes."""
+        return global_session.query(WireSize).all()
 
     @staticmethod
     def create_default_data():
@@ -90,10 +96,12 @@ class WireCutter(Base, Auditing):
     details = Column(String(256), default="")
     max_wire_size_id = Column(Integer, ForeignKey("wire_size.id"), nullable=False)
     max_wire_size = relationship("WireSize", foreign_keys=[max_wire_size_id])
-    max_processing_speed_feet_per_minute = Column(
-        DECIMAL(28, 9), nullable=False, default=0
-    )
+    max_processing_speed_feet_per_minute = Column(Float, nullable=False, default=0)
     options = relationship("WireCutterOption", back_populates="wire_cutter")
+
+    def save(self) -> None:
+        self.date_modified = datetime.datetime.now()
+        global_session.commit()
 
     @staticmethod
     def find_by_name(name: str) -> WireCutter:
@@ -109,6 +117,17 @@ class WireCutter(Base, Auditing):
     def find_all() -> list[WireCutter]:
         """Returns all wire cutters."""
         return global_session.query(WireCutter).all()
+
+    @staticmethod
+    def create(name: str, max_wire_size: WireSize) -> WireCutter:
+        """Creates a new wire cutter."""
+        x = global_session.query(WireCutter).filter(WireCutter.name == name).first()
+        if x:
+            raise Exception(f"Wire cutter {name} already exists")
+        wire_cutter = WireCutter(name=name, max_wire_size_id=max_wire_size.id)
+        global_session.add(wire_cutter)
+        global_session.commit()
+        return wire_cutter
 
     @staticmethod
     def create_default_data():
