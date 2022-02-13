@@ -607,6 +607,9 @@ class CutJobItemEditorDialog(QtWidgets.QDialog):
         if self.cut_job_item:
             self.part_combo_box.setEnabled(False)
             self.quantity_to_cut_spin_box.setEnabled(False)
+            self.part_combo_box.setCurrentIndex(
+                self.part_combo_box.findData(self.cut_job_item.part)
+            )
 
     def key_pressed_event(self, event):
         if event.key() == Qt.Key_Escape:

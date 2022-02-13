@@ -224,9 +224,11 @@ class CutJobItem(Base, Auditing):
 
         finished = value >= total
 
+        for item in self.sales_order_items:
+            item.set_is_cut(finished)
+
         if finished:
             self.date_finished = datetime.datetime.now()
-            self.date_modified = datetime.datetime.now()
 
             fulfilled_status = CutJobItemStatus.find_by_name("Fulfilled")
             self.status_id = fulfilled_status.id
@@ -242,10 +244,16 @@ class CutJobItem(Base, Auditing):
                 job_status = CutJobStatus.find_by_name("Fulfilled")
                 self.cut_job.status_id = job_status.id
                 self.cut_job.date_modified = datetime.datetime.now()
+        else:
+            self.date_finished = None
+            self.status_id = CutJobItemStatus.find_by_name("In Progress").id
 
-                for item in self.sales_order_items:
-                    item.set_is_cut(finished)
-            global_session.commit()
+            job_status = CutJobStatus.find_by_name("In Progress")
+            self.cut_job.status_id = job_status.id
+            self.cut_job.date_modified = datetime.datetime.now()
+
+        self.date_modified = datetime.datetime.now()
+        global_session.commit()
         return value
 
     @property
