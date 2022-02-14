@@ -246,5 +246,9 @@ def start_api(host: str = "0.0.0.0", port: int = 5000) -> None:
 
 
 if __name__ == "__main__":
-    database.create()
-    start_api()
+    try:
+        database.create()
+        start_api()
+    except Exception as e:
+        logger.exception("Fatal error")
+        raise
