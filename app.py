@@ -327,9 +327,7 @@ class MainWindow(QtWidgets.QMainWindow):
         msg.setIcon(QMessageBox.Question)
         msg.setWindowTitle("Update Sales Orders")
         msg.setText(f"{part.number} has been added to the exclude list.")
-        msg.setInformativeText(
-            "Do you want to remove this product from all sales orders?"
-        )
+        msg.setInformativeText("Do you want to update all sales orders with this part?")
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         msg.setDefaultButton(QMessageBox.Yes)
         ret = msg.exec()
@@ -339,12 +337,12 @@ class MainWindow(QtWidgets.QMainWindow):
         # Double check that the user is sure.
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Warning)
-        msg.setWindowTitle("Remove Sales Order Items")
+        msg.setWindowTitle("Update Sales Order Items")
         msg.setText(
-            f"Are you sure you want to remove all sales order items for {part.number}?"
+            f"Are you sure you want to update all sales order items for {part.number}?"
         )
         msg.setInformativeText(
-            "This action cannot be undone! This action will remove all sales order items for this product from all sales orders."
+            "This action will set all items as fully cut regardless of the current status. This action cannot be undone!"
         )
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         msg.setDefaultButton(QMessageBox.No)
@@ -353,10 +351,16 @@ class MainWindow(QtWidgets.QMainWindow):
             return
 
         # Remove all items from all sales orders.
-        frontend_logger.warning(f"Removing all sales order items for {part.number}.")
+        frontend_logger.warning(
+            f"Setting all sales order items for part {part.number} to fully cut."
+        )
 
-        total = SalesOrderItem.remove_part_from_all_items(part)
-        frontend_logger.info(f"Removed {total} sales order items for {part.number}.")
+        total = SalesOrderItem.set_is_cut_for_all_parts(part)
+        frontend_logger.info(f"Updated {total} sales order items for {part.number}.")
+        self.statusbar.showMessage(
+            f"Updated {total} sales order items for {part.number}.", 5000
+        )
+
         self.reload_so_table()
 
     # fmt: off
@@ -521,7 +525,9 @@ class MainWindow(QtWidgets.QMainWindow):
             query = query.filter(Part.number.contains(search_criteria.part_number))
 
         query = query.order_by(SalesOrder.date_scheduled_fulfillment)
-        results = query.all()
+        results = (
+            query.all()
+        )  # type: list[tuple[SalesOrder, Customer, SalesOrderItem, Part]]
 
         data = []
         index = 1
@@ -530,6 +536,11 @@ class MainWindow(QtWidgets.QMainWindow):
         for sales_order, customer, sales_order_item, part in results:
             index_string = str(index)
             index_string = utilities.pad_string(index_string, id_row_max_chars)
+
+            # Skip if part excluded from import.
+            if part.excluded_from_import:
+                continue
+
             data.append(
                 [
                     index_string,

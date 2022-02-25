@@ -139,7 +139,7 @@ def create_sales_orders_from_fishbowl_data(
 
             sales_order_item = SalesOrderItem.find_by_fishbowl_so_item_id_line_number(fb_so_item.id, fb_so_item.lineItem)
 
-            if sales_order_item is None and not part.excluded_from_import: # This keeps excluded parts from being imported.
+            if sales_order_item is None:
                 sales_order_item = SalesOrderItem(
                     part_id=part.id,
                     sales_order_id=sales_order.id,
@@ -182,7 +182,7 @@ def prosess_child_fishbowl_parts(session: session_type_hint, sales_order: SalesO
         line_number = f"{fb_so_item.lineItem}.{index + 1}"
         child_sales_order_item = SalesOrderItem.find_by_fishbowl_so_item_id_line_number(fb_so_item.id, line_number)
 
-        if child_sales_order_item is None and not child_part.excluded_from_import: # This keeps excluded parts from being imported.
+        if child_sales_order_item is None:
             child_sales_order_item = SalesOrderItem(
                 part_id=child_part.id,
                 sales_order_id=sales_order.id,

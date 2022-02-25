@@ -404,3 +404,17 @@ class SalesOrderItem(Base, Auditing):
         global_session.commit()
         SalesOrder.remove_empty_orders()
         return total
+
+    @staticmethod
+    def set_is_cut_for_all_parts(part: Part) -> int:
+        """Sets the is cut flag for all items with this part."""
+        so_items = (
+            global_session.query(SalesOrderItem)
+            .filter(SalesOrderItem.part_id == part.id)
+            .all()
+        )
+        total = 0
+        for item in so_items:
+            total += 1
+            item.set_is_cut(True)
+        return total
