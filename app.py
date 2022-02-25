@@ -32,6 +32,10 @@ from cutlistgenerator.ui.dialogs import (
     WireCutterEditorDialog,
 )
 from cutlistgenerator.update import check_for_updates
+from cutlistgenerator.customwidgets.daterangeselection import (
+    QDateRangeSelection,
+    DateRange,
+)
 
 
 frontend_logger = logging.getLogger("frontend")
@@ -77,6 +81,7 @@ class SalesOrderSearchCriteria:
     customer_name: str
     part_number: str
     show_fully_cut: bool
+    due_date_range: DateRange
 
 
 class Worker(QRunnable):
@@ -164,6 +169,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.so_search_number_lineedit = QtWidgets.QLineEdit()
         self.so_search_customer_name_lineedit = QtWidgets.QLineEdit()
         self.so_search_part_number_lineedit = QtWidgets.QLineEdit()
+        self.due_date_range_selection = QDateRangeSelection()
+        self.due_date_range_selection.setToolTip(
+            f"Select a date range to search for. Select '{DateRange.all().text}' to search for all dates."
+        )
         self.include_fully_cut_checkbox = QtWidgets.QCheckBox("Include Fully Cut")
         self.so_search_button = QtWidgets.QPushButton("Search")
 
@@ -171,6 +180,7 @@ class MainWindow(QtWidgets.QMainWindow):
         search_form_layout.addRow("Number", self.so_search_number_lineedit)
         search_form_layout.addRow("Customer", self.so_search_customer_name_lineedit)
         search_form_layout.addRow("Part Number", self.so_search_part_number_lineedit)
+        search_form_layout.addRow("Due Date", self.due_date_range_selection)
 
         self.so_search_layout.addLayout(search_form_layout)
         self.so_search_layout.addWidget(self.include_fully_cut_checkbox)
@@ -468,6 +478,10 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         # self.view_selected_so_button.clicked.connect(self.view_selected_so)
 
+        self.due_date_range_selection.date_selection_combo_box.currentIndexChanged.connect(
+            self.reload_so_table
+        )
+
     def reset_progress_bar(self):
         self.progressbar.setValue(0)
         self.progressbar.setFormat("")
@@ -520,6 +534,7 @@ class MainWindow(QtWidgets.QMainWindow):
             customer_name=self.so_search_customer_name_lineedit.text(),
             part_number=self.so_search_part_number_lineedit.text(),
             show_fully_cut=self.include_fully_cut_checkbox.isChecked(),
+            due_date_range=self.due_date_range_selection.get_selected_date_range(),
         )
 
     def reload_so_table(self):
@@ -553,6 +568,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if search_criteria.part_number != "":
             query = query.filter(Part.number.contains(search_criteria.part_number))
+
+        if search_criteria.due_date_range.text != DateRange.all().text:
+            query = query.filter(
+                SalesOrderItem.date_scheduled_fulfillment
+                >= search_criteria.due_date_range.start.toPyDate()
+            )
+            query = query.filter(
+                SalesOrderItem.date_scheduled_fulfillment
+                <= search_criteria.due_date_range.end.toPyDate()
+            )
 
         query = query.order_by(SalesOrder.date_scheduled_fulfillment)
         results = (
