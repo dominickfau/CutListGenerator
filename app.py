@@ -278,16 +278,30 @@ class MainWindow(QtWidgets.QMainWindow):
         dialog.exec()
 
     def on_excluded_from_import_clicked(self):
-        selected_row = self.so_table_widget.currentRow()
-        if selected_row == -1:
+        selected_rows = self.get_selected_rows()
+        if not selected_rows:
             return
-        part_number = self.so_table_widget.item(
-            selected_row, COLUMNS.index("Part Number")
-        ).text()
-        part = Part.find_by_number(part_number)
-        if not part:
+        parts = []  # type: list[Part]
+        for index in selected_rows:
+            part_number = self.so_table_widget.item(
+                index, COLUMNS.index("Part Number")
+            ).text()
+            part = Part.find_by_number(part_number)
+            if not part or part and part in parts:
+                continue
+            parts.append(part)
+
+        if not parts:
             return
-        self.excluded_part_from_import(part)
+        if len(parts) == 1:
+            self.excluded_part_from_import(part=parts[0])
+            return
+
+        for part in parts:
+            self.excluded_part_from_import(
+                part, show_message=False, skip_table_reload=True
+            )
+        self.reload_so_table()
 
     def setup_statusbar(self):
         self.statusbar = QtWidgets.QStatusBar(self)
@@ -309,46 +323,55 @@ class MainWindow(QtWidgets.QMainWindow):
         dialog = CustomerNameConverterDialog(self)
         dialog.exec()
 
-    def excluded_part_from_import(self, part: Part):
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Question)
-        msg.setWindowTitle("Add to Exclude List")
-        msg.setText(f"Are you sure you want to add {part.number} to the exclude list?")
-        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        msg.setDefaultButton(QMessageBox.Yes)
-        ret = msg.exec()
-        if ret == QMessageBox.No:
-            return
+    def excluded_part_from_import(
+        self, part: Part, show_message: bool = True, skip_table_reload: bool = False
+    ):
+        """Exclude a part from the import."""
+        if show_message:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Add to Exclude List")
+            msg.setText(
+                f"Are you sure you want to add {part.number} to the exclude list?"
+            )
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg.setDefaultButton(QMessageBox.Yes)
+            ret = msg.exec()
+            if ret == QMessageBox.No:
+                return
 
         frontend_logger.info(f"Adding {part.number} to exclude list.")
         part.set_excluded_from_import(True)
 
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Question)
-        msg.setWindowTitle("Update Sales Orders")
-        msg.setText(f"{part.number} has been added to the exclude list.")
-        msg.setInformativeText("Do you want to update all sales orders with this part?")
-        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        msg.setDefaultButton(QMessageBox.Yes)
-        ret = msg.exec()
-        if ret == QMessageBox.No:
-            return
+        if show_message:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Update Sales Orders")
+            msg.setText(f"{part.number} has been added to the exclude list.")
+            msg.setInformativeText(
+                "Do you want to update all sales orders with this part?"
+            )
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg.setDefaultButton(QMessageBox.Yes)
+            ret = msg.exec()
+            if ret == QMessageBox.No:
+                return
 
-        # Double check that the user is sure.
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Warning)
-        msg.setWindowTitle("Update Sales Order Items")
-        msg.setText(
-            f"Are you sure you want to update all sales order items for {part.number}?"
-        )
-        msg.setInformativeText(
-            "This action will set all items as fully cut regardless of the current status. This action cannot be undone!"
-        )
-        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        msg.setDefaultButton(QMessageBox.No)
-        ret = msg.exec()
-        if ret == QMessageBox.No:
-            return
+            # Double check that the user is sure.
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setWindowTitle("Update Sales Order Items")
+            msg.setText(
+                f"Are you sure you want to update all sales order items for {part.number}?"
+            )
+            msg.setInformativeText(
+                "This action will set all items as fully cut regardless of the current status. This action cannot be undone!"
+            )
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg.setDefaultButton(QMessageBox.No)
+            ret = msg.exec()
+            if ret == QMessageBox.No:
+                return
 
         # Remove all items from all sales orders.
         frontend_logger.warning(
@@ -361,7 +384,8 @@ class MainWindow(QtWidgets.QMainWindow):
             f"Updated {total} sales order items for {part.number}.", 5000
         )
 
-        self.reload_so_table()
+        if not skip_table_reload:
+            self.reload_so_table()
 
     # fmt: off
     def on_so_table_row_double_clicked(self, row: QtWidgets.QTableWidgetItem):
@@ -372,8 +396,8 @@ class MainWindow(QtWidgets.QMainWindow):
         dialog = CutJobEditorDialog(sales_order_items=[sales_order_item], parent=self)
         dialog.exec()
         self.reload_so_table()
-
-    def on_create_new_cut_job_clicked(self):
+    
+    def get_selected_rows(self) -> list[int]:
         selected_items = self.so_table_widget.selectedItems()
         selected_rows = []
         for item in selected_items:
@@ -381,7 +405,13 @@ class MainWindow(QtWidgets.QMainWindow):
             if index in selected_rows:
                 continue
             selected_rows.append(index)
-        
+        frontend_logger.info(f"Selected rows: {selected_rows}")
+        return selected_rows
+
+    def on_create_new_cut_job_clicked(self):
+        selected_rows = self.get_selected_rows()
+        if not selected_rows: return
+
         sales_order_items = [] # type: list[SalesOrderItem]
         for index in selected_rows:
             so_number = self.so_table_widget.item(index, COLUMNS.index("SO Number")).text()
