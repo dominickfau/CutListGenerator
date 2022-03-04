@@ -1,4 +1,5 @@
 from __future__ import annotations
+from operator import or_
 import sys
 import logging
 from dataclasses import dataclass
@@ -80,6 +81,7 @@ class SalesOrderSearchCriteria:
     so_number: str
     customer_name: str
     part_number: str
+    parent_part_number: str
     show_fully_cut: bool
     due_date_range: DateRange
 
@@ -169,6 +171,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.so_search_number_lineedit = QtWidgets.QLineEdit()
         self.so_search_customer_name_lineedit = QtWidgets.QLineEdit()
         self.so_search_part_number_lineedit = QtWidgets.QLineEdit()
+        self.so_search_parent_part_number_lineedit = QtWidgets.QLineEdit()
         self.due_date_range_selection = QDateRangeSelection()
         self.due_date_range_selection.setToolTip(
             f"Select a date range to search for. Select '{DateRange.all().text}' to search for all dates."
@@ -180,6 +183,9 @@ class MainWindow(QtWidgets.QMainWindow):
         search_form_layout.addRow("Number", self.so_search_number_lineedit)
         search_form_layout.addRow("Customer", self.so_search_customer_name_lineedit)
         search_form_layout.addRow("Part Number", self.so_search_part_number_lineedit)
+        search_form_layout.addRow(
+            "Parent Part Number", self.so_search_parent_part_number_lineedit
+        )
         search_form_layout.addRow("Due Date", self.due_date_range_selection)
 
         self.so_search_layout.addLayout(search_form_layout)
@@ -454,6 +460,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.reload_so_table
         )
         self.so_search_part_number_lineedit.returnPressed.connect(self.reload_so_table)
+        self.so_search_parent_part_number_lineedit.returnPressed.connect(
+            self.reload_so_table
+        )
         self.include_fully_cut_checkbox.stateChanged.connect(self.reload_so_table)
 
         self.so_search_number_lineedit.editingFinished.connect(
@@ -466,6 +475,12 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         self.so_search_part_number_lineedit.editingFinished.connect(
             lambda x=self.so_search_part_number_lineedit: utilities.clean_text_input(x)
+        )
+
+        self.so_search_parent_part_number_lineedit.editingFinished.connect(
+            lambda x=self.so_search_parent_part_number_lineedit: utilities.clean_text_input(
+                x
+            )
         )
 
         self.so_search_button.clicked.connect(self.reload_so_table)
@@ -533,6 +548,7 @@ class MainWindow(QtWidgets.QMainWindow):
             so_number=self.so_search_number_lineedit.text(),
             customer_name=self.so_search_customer_name_lineedit.text(),
             part_number=self.so_search_part_number_lineedit.text(),
+            parent_part_number=self.so_search_parent_part_number_lineedit.text(),
             show_fully_cut=self.include_fully_cut_checkbox.isChecked(),
             due_date_range=self.due_date_range_selection.get_selected_date_range(),
         )
@@ -569,6 +585,19 @@ class MainWindow(QtWidgets.QMainWindow):
         if search_criteria.part_number != "":
             query = query.filter(Part.number.contains(search_criteria.part_number))
 
+        if search_criteria.parent_part_number != "":
+            sub_query = global_session.query(Part.id).filter(
+                Part.number.contains(search_criteria.parent_part_number),
+                Part.parent == None,
+            )
+            sub_query_1 = global_session.query(Part.id).filter(
+                or_(
+                    Part.number.contains(search_criteria.parent_part_number),
+                    Part.parent_id.in_(sub_query),
+                )
+            )
+            query = query.filter(Part.id.in_(sub_query_1))
+
         if search_criteria.due_date_range.text != DateRange.all().text:
             query = query.filter(
                 SalesOrderItem.date_scheduled_fulfillment
@@ -580,6 +609,7 @@ class MainWindow(QtWidgets.QMainWindow):
             )
 
         query = query.order_by(SalesOrder.date_scheduled_fulfillment)
+
         results = (
             query.all()
         )  # type: list[tuple[SalesOrder, Customer, SalesOrderItem, Part]]
