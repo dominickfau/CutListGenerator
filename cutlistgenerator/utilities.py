@@ -4,7 +4,7 @@ import functools
 import time
 import logging
 from typing import Callable
-from PyQt5.QtWidgets import QLineEdit
+from PyQt5.QtWidgets import QLineEdit, QStatusBar
 from fishbowlorm import utilities as fb_utilities
 from fishbowlorm import models as fb_models
 from fishbowlorm.models.basetables import ORM
@@ -38,7 +38,7 @@ def debug_run_time(function: Callable, logger: logging.Logger = backend_logger):
         result = function(*args, **kwargs)
         end = time.perf_counter()
         # logger.warning("=" * 80)
-        logger.warning(f"[EXECUTION TIME] Function: {function.__name__}: {end - start}")
+        logger.debug(f"[EXECUTION TIME] Function: {function.__name__}: {end - start}")
         return result
 
     return wrapper
@@ -161,6 +161,17 @@ def create_sales_orders_from_fishbowl_data(
                 session.add(sales_order_item)
                 session.commit()
                 backend_logger.debug(f"Creating sales order item {sales_order_item}.")
+            else:
+                # Update the sales order item.
+                # TODO: Change to only update the fields that have changed.
+                sales_order_item.date_modified = datetime.datetime.now()
+                sales_order_item.status_id = SalesOrderItemStatus.find_by_name(fb_so_item.statusObj.name).id
+                sales_order_item.type_id = SalesOrderItemType.find_by_name(fb_so_item.typeObj.name).id
+                sales_order_item.quantity_fulfilled = fb_so_item.quantityFulfilled
+                sales_order_item.quantity_picked = fb_so_item.quantityPicked
+                sales_order_item.quantity_to_fulfill = fb_so_item.quantityToFulfill
+                sales_order_item.quantity_ordered = fb_so_item.quantityOrdered
+                session.commit()
 
             if fb_parent_part in child_parts:
                 fb_child_parts = child_parts[fb_parent_part]
@@ -205,6 +216,17 @@ def prosess_child_fishbowl_parts(session: session_type_hint, sales_order: SalesO
             session.add(child_sales_order_item)
             session.commit()
             backend_logger.debug(f"Creating child sales order item {child_sales_order_item}.")
+        else:
+            # Update the child sales order item.
+            # TODO: Change to only update the fields that have changed.
+            child_sales_order_item.date_modified = datetime.datetime.now()
+            child_sales_order_item.status_id = SalesOrderItemStatus.find_by_name(fb_so_item.statusObj.name).id
+            child_sales_order_item.type_id = SalesOrderItemType.find_by_name(fb_so_item.typeObj.name).id
+            child_sales_order_item.quantity_fulfilled = fb_so_item.quantityFulfilled
+            child_sales_order_item.quantity_picked = fb_so_item.quantityPicked
+            child_sales_order_item.quantity_to_fulfill = fb_so_item.quantityToFulfill
+            child_sales_order_item.quantity_ordered = fb_so_item.quantityOrdered
+            session.commit()
 
 # This line restarts the black magic.
 # fmt: on
