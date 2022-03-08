@@ -1,6 +1,6 @@
 from __future__ import annotations
 from operator import or_
-import sys
+import sys, time
 import logging
 from dataclasses import dataclass
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -14,8 +14,9 @@ from cutlistgenerator import (
     FISHBOWL_DATABASE_HOST,
     FISHBOWL_DATABASE_PORT,
     FISHBOWL_DATABASE_SCHEMA,
+    DEBUG,
 )
-from cutlistgenerator.database import global_session
+from cutlistgenerator.database import global_session, create as create_database
 from cutlistgenerator.database.models.salesorder import (
     SalesOrder,
     SalesOrderItem,
@@ -123,7 +124,11 @@ class WorkerSignals(QObject):
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"{PROGRAM_NAME} v{PROGRAM_VERSION}")
+        title = f"{PROGRAM_NAME} v{PROGRAM_VERSION}"
+        self.setWindowTitle(title)
+        if DEBUG:
+            self.setWindowTitle(f"{title} (DEBUG)")
+
         self.resize(800, 600)
         self.setup_ui()
         self.connect_signals()
@@ -572,6 +577,7 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
         query = query.filter(SalesOrder.status_id <= so_open_status.id)
+        query = query.filter(Part.excluded_from_import == False)
 
         if not search_criteria.show_fully_cut:
             query = query.filter(SalesOrderItem.is_cut == False)
@@ -622,10 +628,6 @@ class MainWindow(QtWidgets.QMainWindow):
             index_string = str(index)
             index_string = utilities.pad_string(index_string, id_row_max_chars)
 
-            # Skip if part excluded from import.
-            if part.excluded_from_import:
-                continue
-
             data.append(
                 [
                     index_string,
@@ -652,6 +654,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 if __name__ == "__main__":
+    create_database()
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow()
     window.show()
