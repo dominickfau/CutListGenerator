@@ -59,6 +59,16 @@ class Status(Base):
         return f'<{self.__class__.name}(id={self.id}, name="{self.name}")>'
 
 
+class Type_(Base):
+    __abstract__ = True
+    __table_args__ = {"sqlite_autoincrement": False}
+
+    name = Column(String(50), nullable=False, unique=True)
+
+    def __repr__(self):
+        return f'<{self.__class__.name}(id={self.id}, name="{self.name}")>'
+
+
 def create_schema() -> None:
     """Create the database schema."""
     backend_logger.info(f"Creating schema [{SCHEMA_NAME}].")
