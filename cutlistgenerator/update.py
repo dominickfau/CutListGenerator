@@ -2,11 +2,9 @@
     Checking github for a newer release."""
 
 from __future__ import annotations
-import webbrowser
 import requests
 import json
 import logging
-from PyQt5.QtWidgets import QMessageBox, QApplication
 from dataclasses import dataclass
 from .settings import *
 
@@ -216,35 +214,18 @@ def get_latest_release() -> ReleaseResponse:
     return ReleaseResponse.from_json(json.loads(response.text))
 
 
-def check_for_updates() -> bool:
-    """Checks for newer releases."""
+def check_for_updates() -> tuple[bool, str, str]:
+    """Checks for newer releases. Returns (True, version, url) if a newer."""
     try:
         latest_release = get_latest_release()
-        backend_logger.debug(f"Latest release:\n{latest_release.json()}\n")
+        # backend_logger.debug(f"Latest release:\n{latest_release.json()}\n")
         if not Version.from_string(latest_release.version).is_newer(CURRENT_VERSION):
             backend_logger.info("No new release available.")
-            return False
+            return False, "", ""
 
         root_logger.info(f"New release available: {latest_release.version}")
 
-        dialog = QMessageBox()
-        dialog.setWindowTitle("New release available")
-        dialog.setText(f"New release available: {latest_release.version}")
-        dialog.setInformativeText("Would you like to open the download page?")
-        dialog.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        dialog.setDefaultButton(QMessageBox.Yes)
-        dialog.setIcon(QMessageBox.Information)
-        if dialog.exec_() == QMessageBox.No:
-            return
-
-        # Open an internet browser to download the release
-        webbrowser.open(latest_release.html_url)
-        return True
+        return True, latest_release.version, latest_release.html_url
     except Exception as e:
         backend_logger.exception("Error checking for updates.")
-        return False
-
-
-if __name__ == "__main__":
-    app = QApplication([])
-    check_for_updates()
+        return False, "", ""

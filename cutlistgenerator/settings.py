@@ -74,9 +74,7 @@ else:
 
 
 # Logging settings
-FRONT_END_LOG_FILE = "frontend.log"
-BACK_END_LOG_FILE = "backend.log"
-API_LOG_FILE = "api.log"
+LOG_FILE = "cutlistgenerator.log"
 SQLALCHEMY_ENGINE_LOG_FILE = "sqlalchemy_engine.log"
 SQLALCHEMY_POOL_LOG_FILE = "sqlalchemy_pool.log"
 SQLALCHEMY_DIALECT_LOG_FILE = "sqlalchemy_dialect.log"

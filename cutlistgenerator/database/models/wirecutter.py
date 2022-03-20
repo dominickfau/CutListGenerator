@@ -99,6 +99,9 @@ class WireCutter(Base, Auditing):
     max_processing_speed_feet_per_minute = Column(Float, nullable=False, default=0)
     options = relationship("WireCutterOption", back_populates="wire_cutter")
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(name={self.name!r}, description={self.description!r})"
+
     def save(self) -> None:
         self.date_modified = datetime.datetime.now()
         global_session.commit()
