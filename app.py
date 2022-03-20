@@ -1,11 +1,11 @@
 from __future__ import annotations
-from operator import or_
-import sys, time
+import sys
 import logging
+import webbrowser
 from dataclasses import dataclass
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QRunnable, QThreadPool, pyqtSlot, pyqtSignal, QObject, Qt
-from PyQt5.QtWidgets import QApplication, QMessageBox, QProgressBar, QPushButton
+from PyQt5.QtWidgets import QApplication, QMessageBox, QProgressBar
 from cutlistgenerator.database.models.customer import Customer
 import fishbowlorm
 from cutlistgenerator import (
@@ -132,8 +132,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.resize(800, 600)
         self.setup_ui()
         self.connect_signals()
-
-        root_logger.info("Starting {} version {}".format(PROGRAM_NAME, PROGRAM_VERSION))
 
         self.updating_table = False
         self.updating_fishbowl_data = False
@@ -524,9 +522,15 @@ class MainWindow(QtWidgets.QMainWindow):
             fishbowl_orm
         )
 
+        # FOR TESTING ONLY
+        # utilities.create_sales_orders_from_fishbowl_data(
+        #     session=global_session,
+        #     fishbowl_orm=fishbowl_orm,
+        #     fb_open_sales_orders=fb_open_sales_orders,
+        # )
+
         worker = Worker(
             fn=utilities.create_sales_orders_from_fishbowl_data,
-            session=global_session,
             fishbowl_orm=fishbowl_orm,
             fb_open_sales_orders=fb_open_sales_orders,
         )
@@ -592,17 +596,15 @@ class MainWindow(QtWidgets.QMainWindow):
             query = query.filter(Part.number.contains(search_criteria.part_number))
 
         if search_criteria.parent_part_number != "":
-            sub_query = global_session.query(Part.id).filter(
-                Part.number.contains(search_criteria.parent_part_number),
-                Part.parent == None,
+            parent_part = (
+                global_session.query(Part)
+                .filter(Part.number == search_criteria.parent_part_number)
+                .first()
             )
-            sub_query_1 = global_session.query(Part.id).filter(
-                or_(
-                    Part.number.contains(search_criteria.parent_part_number),
-                    Part.parent_id.in_(sub_query),
-                )
-            )
-            query = query.filter(Part.id.in_(sub_query_1))
+            if parent_part is not None:
+                part_ids = [parent_part.id]
+                part_ids.extend([child.id for child in parent_part.children])
+                query = query.filter(Part.id.in_(part_ids))
 
         if search_criteria.due_date_range.text != DateRange.all().text:
             query = query.filter(
@@ -628,6 +630,7 @@ class MainWindow(QtWidgets.QMainWindow):
             index_string = str(index)
             index_string = utilities.pad_string(index_string, id_row_max_chars)
 
+            # fmt: off
             data.append(
                 [
                     index_string,
@@ -641,11 +644,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     str(int(sales_order_item.quantity_left_to_fulfill)),
                     sales_order_item.has_cut_job_item_string,
                     sales_order_item.fully_cut,
-                    part.parent.number if part.parent else "",
-                    part.parent.description if part.parent else "",
+                    sales_order_item.parent_item.part.number if sales_order_item.parent_item_id != None else "",
+                    sales_order_item.parent_item.part.description if sales_order_item.parent_item_id != None else "",
                 ]
             )
             index += 1
+            # fmt: on
 
         for row in data:
             self.so_table_widget.insert_row_data(row)
@@ -653,10 +657,42 @@ class MainWindow(QtWidgets.QMainWindow):
         self.so_table_widget.resizeColumnsToContents()
 
 
-if __name__ == "__main__":
-    create_database()
+def show_new_release_dialog(version: str, html_url: str):
+    dialog = QMessageBox()
+    dialog.setWindowTitle("New release available")
+    dialog.setText(f"New release available: {version}")
+    dialog.setInformativeText("Would you like to open the download page?")
+    dialog.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+    dialog.setDefaultButton(QMessageBox.Yes)
+    dialog.setIcon(QMessageBox.Information)
+    if dialog.exec_() == QMessageBox.No:
+        return
+
+    # Open an internet browser to download the release
+    try:
+        webbrowser.open(html_url)
+    except Exception as e:
+        root_logger.exception(f"Failed to open browser to download release.")
+        QMessageBox.critical(None, "Error", f"Could not open browser: {e}")
+
+
+def main():
     app = QtWidgets.QApplication(sys.argv)
+    create_database()
+    newer, version, url = check_for_updates()
+
     window = MainWindow()
     window.show()
-    check_for_updates()
+
+    if newer:
+        show_new_release_dialog(version, url)
+
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    root_logger.info("=" * 80)
+    root_logger.info("Starting {} version {}".format(PROGRAM_NAME, PROGRAM_VERSION))
+    if DEBUG:
+        root_logger.debug("Debug mode enabled.")
+    main()

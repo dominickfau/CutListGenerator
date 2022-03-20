@@ -1,20 +1,25 @@
 from __future__ import annotations
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, Integer, ForeignKey
+from sqlalchemy import Column, String, Boolean, Integer, ForeignKey, Table
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm.collections import collection, attribute_mapped_collection
 
-from cutlistgenerator.database import Auditing, Base, global_session
+from cutlistgenerator.database import Auditing, Base, DeclarativeBase, global_session
 from cutlistgenerator.settings import DEFAULT_DUE_DATE_PUSH_BACK_DAYS
+
+
+class ParentToChildPart(DeclarativeBase):
+    __tablename__ = "parent_to_child_part"
+
+    parent_id = Column(Integer, ForeignKey("part.id"), primary_key=True)
+    child_id = Column(Integer, ForeignKey("part.id"), primary_key=True)
 
 
 class Part(Base, Auditing):
     """Represents a part."""
 
     __tablename__ = "part"
-    __table_args__ = {"extend_existing": True}
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    parent_id = Column(Integer, ForeignKey("part.id"))
     description = Column(String(256), default="")
     number = Column(String(50), unique=True, nullable=False)
     excluded_from_import = Column(Boolean, default=False)
@@ -24,7 +29,36 @@ class Part(Base, Auditing):
         doc="Number of days to push back the due date.",
     )
 
-    parent = relationship("Part", remote_side=[id])  # type: Part
+    # fmt: off
+    children = relationship(
+        "Part",
+        secondary=ParentToChildPart.__table__,
+        primaryjoin="Part.id == ParentToChildPart.parent_id",
+        secondaryjoin="Part.id == ParentToChildPart.child_id"
+    )
+    # fmt: on
+
+    @collection.appender
+    def add_child(self, child: Part) -> None:
+        """Append a child part."""
+        self.children.append(child)
+        self.date_modified = datetime.now()
+        global_session.commit()
+
+    @property
+    def parent(self) -> Part:
+        """Return the parent part."""
+        parent_to_child = (
+            global_session.query(ParentToChildPart)
+            .filter(ParentToChildPart.child_id == self.id)
+            .first()
+        )
+        if parent_to_child is None:
+            return None
+        return Part.find_by_id(parent_to_child.parent_id)
+
+    def __repr__(self) -> str:
+        return f"<Part {self.number}>"
 
     def set_excluded_from_import(self, excluded_from_import: bool) -> None:
         """Set the excluded_from_import flag."""
@@ -48,6 +82,11 @@ class Part(Base, Auditing):
     def find_by_number(number: str) -> Part:
         """Returns the part with the given number."""
         return global_session.query(Part).filter(Part.number == number).first()
+
+    @staticmethod
+    def find_by_id(id: int) -> Part:
+        """Returns the part with the given id."""
+        return global_session.query(Part).filter(Part.id == id).first()
 
     @staticmethod
     def from_fishbowl_part(fishbowl_part) -> Part:
