@@ -39,6 +39,8 @@ from cutlistgenerator.customwidgets.daterangeselection import (
     DateRange,
 )
 
+from cutlistgenerator.database.models import SystemProperty
+
 
 frontend_logger = logging.getLogger("frontend")
 root_logger = logging.getLogger("root")
@@ -234,10 +236,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fishbowl_menu = QtWidgets.QMenu(self.menubar)
         self.fishbowl_menu.setTitle("Fishbowl")
 
-        self.update_fishbowl_data_action = QtWidgets.QAction(self)
-        self.update_fishbowl_data_action.setText("Update Fishbowl Data")
-        self.update_fishbowl_data_action.triggered.connect(self.update_fishbowl_data)
-        self.fishbowl_menu.addAction(self.update_fishbowl_data_action)
+        self.update_fishbowl_so_data_action = QtWidgets.QAction(self)
+        self.update_fishbowl_so_data_action.setText("Update Fishbowl SO Data")
+        self.update_fishbowl_so_data_action.triggered.connect(
+            self.update_fishbowl_so_data
+        )
+        self.fishbowl_menu.addAction(self.update_fishbowl_so_data_action)
+
+        self.update_fishbowl_part_data_action = QtWidgets.QAction(self)
+        self.update_fishbowl_part_data_action.setText("Update Fishbowl Part Data")
+        self.update_fishbowl_part_data_action.triggered.connect(
+            self.update_fishbowl_part_data
+        )
+        self.fishbowl_menu.addAction(self.update_fishbowl_part_data_action)
 
         self.edit_excluded_parts_action = QtWidgets.QAction(self)
         self.edit_excluded_parts_action.setText("Edit Excluded Parts")
@@ -505,18 +516,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.progressbar.setFormat("")
         self.progressbar.hide()
 
-    def update_fishbowl_data(self):
+    def update_fishbowl_part_data(self):
+        pass
+
+    def update_fishbowl_so_data(self):
         def set_updating_table(value: bool):
             self.updating_table = value
 
         if self.updating_table:
             frontend_logger.warning(
-                "Attempted to update Fishbowl data, but an update thread is already running. Ignoring request."
+                "Attempted to update Fishbowl SO data, but an update thread is already running. Ignoring request."
             )
             return
 
         self.updating_table = True
-        frontend_logger.info("Starting thread to update Fishbowl data.")
+        frontend_logger.info("Starting thread to update Fishbowl SO data.")
 
         fb_open_sales_orders = fishbowlorm.models.FBSalesOrder.find_all_open(
             fishbowl_orm
