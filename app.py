@@ -616,7 +616,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 <= search_criteria.due_date_range.end.toPyDate()
             )
 
-        query = query.order_by(SalesOrder.date_scheduled_fulfillment)
+        query = query.order_by(SalesOrderItem.date_scheduled_fulfillment)
 
         results = (
             query.all()
