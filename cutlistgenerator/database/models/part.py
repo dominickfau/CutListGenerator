@@ -1,8 +1,8 @@
 from __future__ import annotations
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, Integer, ForeignKey, Table
+from sqlalchemy import Column, String, Boolean, Integer, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.orm.collections import collection, attribute_mapped_collection
+from sqlalchemy.orm.collections import collection
 
 from cutlistgenerator.database import Auditing, Base, DeclarativeBase, global_session
 from cutlistgenerator.settings import DEFAULT_DUE_DATE_PUSH_BACK_DAYS

@@ -94,3 +94,26 @@ class DefaultLocation(Base):
     def find_by_part(part: Part) -> list[DefaultLocation]:
         """Finds all default locations for a part."""
         return global_session.query(DefaultLocation).filter_by(part_id=part.id).all()
+
+
+class LocationInstruction(Base):
+    """Represents the steps a part takes."""
+
+    __tablename__ = "location_instruction"
+    
+    active = Column(Boolean, nullable=False, default=True)
+    description = Column(String(256), nullable=False)
+    location_id = Column(Integer, ForeignKey("location.id"), nullable=False)
+    location = relationship("Location", foreign_keys=[location_id])  # type: Location
+    part_id = Column(Integer, ForeignKey("part.id"), nullable=False)
+    part = relationship("Part", foreign_keys=[part_id])  # type: Part
+
+    @staticmethod
+    def find_by_part(part: Part) -> list[LocationInstruction]:
+        """Finds all location instructions for a part."""
+        return global_session.query(LocationInstruction).filter_by(part_id=part.id).all()
+    
+    @property
+    def sort_id(self) -> int:
+        """Returns the sort id of the location instruction."""
+        pass

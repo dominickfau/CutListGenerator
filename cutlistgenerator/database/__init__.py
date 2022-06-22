@@ -119,6 +119,7 @@ from .models.salesorder import (
 )
 from .models.cutjob import CutJobStatus, CutJobItemStatus
 from .models.wirecutter import WireSize, WireCutter
+from .models.systemproperty import SystemProperty
 
 
 def create_default_data() -> None:
@@ -133,6 +134,7 @@ def create_default_data() -> None:
     CutJobItemStatus.create_default_data()
     WireSize.create_default_data()
     WireCutter.create_default_data()
+    SystemProperty.create_default_data()
 
 
 def create(force_recreate: bool = False) -> None:
