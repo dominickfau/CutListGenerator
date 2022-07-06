@@ -1,4 +1,5 @@
 from __future__ import annotations
+from distutils import log
 import sqlalchemy
 import datetime
 import logging
@@ -17,8 +18,16 @@ from cutlistgenerator import (
 
 backend_logger = logging.getLogger("backend")
 
+log_started = False
+if not log_started:
+    logging.getLogger("sqlalchemy.engine").info("=" * 80)
+    logging.getLogger("sqlalchemy.pool").info("=" * 80)
+    logging.getLogger("sqlalchemy.dialects").info("=" * 80)
+    logging.getLogger("sqlalchemy.orm").info("=" * 80)
+    log_started = True
 
-engine = create_engine(DATABASE_URL_WITH_SCHEMA)
+
+engine = create_engine(DATABASE_URL_WITH_SCHEMA, isolation_level="READ COMMITTED")
 # type: sqlalchemy.orm.session.sessionmaker
 Session = sessionmaker(bind=engine)
 global_session = Session()  # type: session_type_hint
