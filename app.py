@@ -1,5 +1,6 @@
 from __future__ import annotations
 import sys
+import traceback
 import logging
 import webbrowser
 from dataclasses import dataclass
@@ -16,7 +17,7 @@ from cutlistgenerator import (
     FISHBOWL_DATABASE_SCHEMA,
     DEBUG,
 )
-from cutlistgenerator.database import global_session, create as create_database
+from cutlistgenerator.database import global_session, create as create_database, Session
 from cutlistgenerator.database.models.salesorder import (
     SalesOrder,
     SalesOrderItem,
@@ -690,9 +691,33 @@ def show_new_release_dialog(version: str, html_url: str):
         QMessageBox.critical(None, "Error", f"Could not open browser: {e}")
 
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    root_logger.critical("Uncaught exception!", exc_info=(exc_type, exc_value, exc_traceback))
+
+sys.excepthook = handle_exception
+
+
 def main():
     app = QtWidgets.QApplication(sys.argv)
-    create_database()
+    if FORCE_REBUILD_DATABASE:
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setWindowTitle("Database Rebuild")
+        msg.setText("Danger, setting 'force_rebuild_database' is set True. Do you want to rebuild the database? This will result in permanent data loss proceed with caution.")
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes| QMessageBox.StandardButton.No)
+        msg.setDefaultButton(QMessageBox.StandardButton.No)
+
+        if msg.exec() == QMessageBox.StandardButton.No:
+            create_database(False)
+        else:
+            create_database(True)
+    else:
+        create_database()
+        
     newer, version, url = check_for_updates()
 
     window = MainWindow()
@@ -700,7 +725,7 @@ def main():
 
     if newer:
         show_new_release_dialog(version, url)
-
+    
     sys.exit(app.exec_())
 
 
@@ -709,4 +734,5 @@ if __name__ == "__main__":
     root_logger.info("Starting {} version {}".format(PROGRAM_NAME, PROGRAM_VERSION))
     if DEBUG:
         root_logger.debug("Debug mode enabled.")
+    
     main()
