@@ -3,7 +3,7 @@ import datetime
 import logging
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Boolean
 from sqlalchemy.orm import backref, relationship
-from cutlistgenerator.database import Auditing, Base, Status, global_session
+from cutlistgenerator.database import Auditing, Base, Session, Status, global_session, session_type_hint
 from cutlistgenerator.database.models.customer import Customer
 from cutlistgenerator.database.models.part import Part
 
@@ -185,6 +185,9 @@ class SalesOrder(Base, Auditing):
         "SalesOrderStatus", foreign_keys=[status_id]
     )  # type: SalesOrderStatus
 
+    def __str__(self) -> str:
+        return self.number
+
     def to_dict(self, include_items=True) -> dict:
         result = {}
         for column in self.__table__.columns:
@@ -196,9 +199,46 @@ class SalesOrder(Base, Auditing):
         result.pop("status_id")
         result.pop("customer_id")
         return result
+    
+    @staticmethod
+    def create(number: str, customer: Customer, date_scheduled_fulfillment: datetime.datetime=None, status: SalesOrderStatus=None, session: session_type_hint=None) -> SalesOrder:
+        """Creates a new blank sales order.
+
+        Args:
+            number (str): A unique number for this order.
+            customer (Customer): The customer this order is for.
+            date_scheduled_fulfillment (datetime.datetime, optional): Due date for this order. Defaults to current datetime.
+            status (SalesOrderStatus, optional): Status for this order. Defaults to Estimate.
+            session (Session, optional): Session to use for this operation. Defaults to Global Session.
+
+        Returns:
+            SalesOrder: Returns the newly created order.
+        """
+        if not session: session = global_session
+        if not date_scheduled_fulfillment: date_scheduled_fulfillment = datetime.datetime.now()
+        if not status: status = SalesOrderStatus.find_by_name("Estimate")
+
+        sales_order = SalesOrder(
+            customer_id=customer.id,
+            date_scheduled_fulfillment=date_scheduled_fulfillment,
+            number=number,
+            status_id=status.id,
+        )
+        session.add(sales_order)
+        session.commit()
+        backend_logger.debug(f"Creating sales order {sales_order}.")
+        return sales_order
 
     @staticmethod
     def find_by_number(number: str) -> SalesOrder:
+        """Finds a sales order by number.
+
+        Args:
+            number (str): Sales Order number to find.
+
+        Returns:
+            SalesOrder: Returns the sales order if found, else None
+        """
         return (
             global_session.query(SalesOrder).filter(SalesOrder.number == number).first()
         )
@@ -418,3 +458,43 @@ class SalesOrderItem(Base, Auditing):
             total += 1
             item.set_is_cut(True)
         return total
+    
+    @staticmethod
+    def create(
+            part: Part,
+            sales_order: SalesOrder,
+            description: str,
+            quantity_fulfilled: float,
+            quantity_ordered: float,
+            quantity_picked: float,
+            quantity_to_fulfill: float,
+            line_number: str,
+            date_scheduled_fulfillment: datetime.datetime=None,
+            fb_so_item_id: int=None,
+            status: SalesOrderItemStatus=None,
+            type: SalesOrderItemType=None,
+            session: session_type_hint=None
+        ) -> SalesOrderItem:
+
+        if not session: session = global_session
+        if not date_scheduled_fulfillment: date_scheduled_fulfillment = datetime.datetime.now()
+        if not status: status = SalesOrderItemStatus.find_by_name("Entered")
+        if not type: type = SalesOrderItemType.find_by_name("Sale")
+
+        sales_order_item = SalesOrderItem(
+            part_id=part.id,
+            sales_order_id=sales_order.id,
+            date_scheduled_fulfillment=date_scheduled_fulfillment,
+            description=description,
+            fb_so_item_id=fb_so_item_id,
+            quantity_fulfilled=quantity_fulfilled,
+            quantity_ordered=quantity_ordered,
+            quantity_picked=quantity_picked,
+            quantity_to_fulfill=quantity_to_fulfill,
+            line_number=line_number,
+            status_id=status.id,
+            type_id=type.id,
+        )
+        session.add(sales_order_item)
+        session.commit()
+        backend_logger.debug(f"Creating sales order item {sales_order_item}.")

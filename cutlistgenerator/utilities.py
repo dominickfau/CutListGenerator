@@ -3,8 +3,11 @@ import datetime
 import functools
 import time
 import logging
+from turtle import back
 from typing import Callable
 from PyQt5.QtWidgets import QLineEdit, QStatusBar
+import sqlalchemy
+from sqlalchemy.exc import SQLAlchemyError
 from fishbowlorm import utilities as fb_utilities
 from fishbowlorm import models as fb_models
 from fishbowlorm.models.basetables import ORM
@@ -42,7 +45,7 @@ def debug_run_time(function: Callable, logger: logging.Logger = backend_logger):
         return result
 
     return wrapper
-
+    
 
 def clean_text_input(widget: QLineEdit):
     """Removes leading and trailing whitespace from a QLineEdit."""
@@ -75,7 +78,7 @@ def create_sales_orders_from_fishbowl_data(
     backend_logger.info("Creating / Updating SalesOrder objects from Fishbowl data.")
 
     child_parts = {} # type: dict[fb_models.FBPart, list[fb_models.FBPart]] # Used to store child parts for parent parts that have been processed.
-    customers = {} # type: dict[Customer.name, Customer] # Used to keep track of customers that have been created.
+    customers = {} # type: dict[str, Customer] # Used to keep track of customers that have been created.
     total = len(fb_open_sales_orders)
     backend_logger.info(f"{total} sales orders to process.")
 
@@ -88,10 +91,22 @@ def create_sales_orders_from_fishbowl_data(
     backend_logger.info("Processing Fishbowl sales orders.")
 
     with Session() as session:
+        # Create all customers that dont exist.
+        for fishbowl_sales_order in fb_open_sales_orders:
+            fb_cutomer_name = fishbowl_sales_order.customerObj.name
+            if fb_cutomer_name in customers:
+                continue
+
+            customer = Customer(name=fb_cutomer_name)
+            backend_logger.info(f"Creating customer {customer}.")
+            session.add(customer)
+            customers[fb_cutomer_name] = customer
+        
+        session.commit()
+
         for index, fishbowl_sales_order in enumerate(fb_open_sales_orders):
             fb_so_number = fishbowl_sales_order.number
             fb_so_status_name = fishbowl_sales_order.statusObj.name
-            fb_cutomer_name = fishbowl_sales_order.customerObj.name
             loading_bar_value = int(index / total * 100)
             loading_bar_message = f"Processing sales order {fb_so_number} ({index}/{total})"
 
@@ -100,32 +115,22 @@ def create_sales_orders_from_fishbowl_data(
             if progress_signal is not None: progress_signal.emit(loading_bar_value)
             if progress_data_signal is not None: progress_data_signal.emit(loading_bar_message)
 
-            # Create the customer if it doesn't exist.
-            try:
-                customer = customers[fb_cutomer_name]
-            except KeyError:
-                customer = Customer(name=fb_cutomer_name)
-                backend_logger.info(f"Creating customer {customer.name}.")
-                session.add(customer)
-                session.commit()
-                customers[fb_cutomer_name] = customer
-
             # Find the sales order, or create it if it doesn't exist.
             sales_order = SalesOrder.find_by_number(fb_so_number)
+
             if sales_order is None:
-                sales_order = SalesOrder(
+                sales_order = SalesOrder.create(
+                    number=fb_so_number,
                     customer=customer,
                     date_scheduled_fulfillment=fishbowl_sales_order.dateScheduledFulfillment,
-                    number=fb_so_number,
-                    status_id=SalesOrderStatus.find_by_name(fb_so_status_name).id,
+                    status=SalesOrderStatus.find_by_name(fb_so_status_name),
+                    session=session
                 )
-                backend_logger.debug(f"Creating sales order {sales_order.number}.")
-                session.add(sales_order)
-                session.commit()
 
-            sales_order.date_modified = datetime.datetime.now()
-            sales_order.status_id = SalesOrderStatus.find_by_name(fb_so_status_name).id
-            session.commit()
+            if sales_order.status.name != fb_so_status_name:
+                sales_order.date_modified = datetime.datetime.now()
+                sales_order.status_id = SalesOrderStatus.find_by_name(fb_so_status_name).id
+                backend_logger.debug(f"Updating order status {fb_so_status_name}.")
 
             for fb_so_item in fishbowl_sales_order.items:
                 # Find the sales order item, or create it if it doesn't exist.
@@ -135,14 +140,14 @@ def create_sales_orders_from_fishbowl_data(
 
                 part = Part.find_by_number(fb_parent_part.number)
                 if part is None:
-                    part = Part.from_fishbowl_part(fb_parent_part)
+                    part = Part.create(number=fb_parent_part.number, description=fb_parent_part.description, session=session)
 
                 sales_order_item = SalesOrderItem.find_by_fishbowl_so_item_id_line_number(fb_so_item.id, fb_so_item.lineItem)
 
                 if sales_order_item is None:
-                    sales_order_item = SalesOrderItem(
-                        part_id=part.id,
-                        sales_order_id=sales_order.id,
+                    sales_order_item = SalesOrderItem.create(
+                        part=part,
+                        sales_order=sales_order,
                         date_scheduled_fulfillment=fb_so_item.dateScheduledFulfillment,
                         description=fb_so_item.description,
                         fb_so_item_id=fb_so_item.id,
@@ -151,16 +156,10 @@ def create_sales_orders_from_fishbowl_data(
                         quantity_picked=fb_so_item.quantityPicked,
                         quantity_to_fulfill=fb_so_item.quantityToFulfill,
                         line_number=fb_so_item.lineItem,
-                        status_id=SalesOrderItemStatus.find_by_name(
-                            fb_so_item.statusObj.name
-                        ).id,
-                        type_id=SalesOrderItemType.find_by_name(
-                            fb_so_item.typeObj.name
-                        ).id,
+                        status=SalesOrderItemStatus.find_by_name(fb_so_item.statusObj.name),
+                        type=SalesOrderItemType.find_by_name(fb_so_item.typeObj.name),
+                        session=session
                     )
-                    session.add(sales_order_item)
-                    session.commit()
-                    backend_logger.debug(f"Creating sales order item {sales_order_item}.")
                 else:
                     # Update the sales order item.
                     # TODO: Change to only update the fields that have changed.
@@ -171,7 +170,6 @@ def create_sales_orders_from_fishbowl_data(
                     sales_order_item.quantity_picked = fb_so_item.quantityPicked
                     sales_order_item.quantity_to_fulfill = fb_so_item.quantityToFulfill
                     sales_order_item.quantity_ordered = fb_so_item.quantityOrdered
-                    session.commit()
 
                 if fb_parent_part in child_parts:
                     fb_child_parts = child_parts[fb_parent_part]
@@ -180,6 +178,8 @@ def create_sales_orders_from_fishbowl_data(
                     child_parts[fb_parent_part] = fb_child_parts = fb_utilities.get_child_parts(fishbowl_orm, fb_parent_part)
                 
                 prosess_child_fishbowl_parts(session, sales_order, sales_order_item, fb_so_item, fb_child_parts, part)
+            
+            session.commit()
 
 
 def prosess_child_fishbowl_parts(session: session_type_hint, sales_order: SalesOrder, sales_order_item: SalesOrderItem, fb_so_item: fb_models.FBSalesOrderItem, fb_child_parts: list[fb_models.FBPart], parent_part: Part):
@@ -187,38 +187,31 @@ def prosess_child_fishbowl_parts(session: session_type_hint, sales_order: SalesO
         backend_logger.debug(f"Processing child part {fb_child_part}.")
         child_part = Part.find_by_number(fb_child_part.number)
         if child_part is None:
-            child_part = Part.from_fishbowl_part(fb_child_part)
+            child_part = Part.create(number=fb_child_part.number, description=fb_child_part.description, session=session)
 
         if child_part not in parent_part.children:
             backend_logger.debug(f"Adding child part {child_part.id} to parent {parent_part.id}.")
-            parent_part.add_child(child_part)
+            parent_part.add_child(child_part, session=session)
 
         line_number = f"{fb_so_item.lineItem}.{index + 1}"
         child_sales_order_item = SalesOrderItem.find_by_fishbowl_so_item_id_line_number(fb_so_item.id, line_number)
 
         if child_sales_order_item is None:
-            child_sales_order_item = SalesOrderItem(
-                part_id=child_part.id,
-                sales_order_id=sales_order.id,
-                date_scheduled_fulfillment=fb_so_item.dateScheduledFulfillment,
-                description=fb_so_item.description,
-                fb_so_item_id=fb_so_item.id,
-                quantity_fulfilled=fb_so_item.quantityFulfilled,
-                quantity_ordered=fb_so_item.quantityOrdered,
-                quantity_picked=fb_so_item.quantityPicked,
-                quantity_to_fulfill=fb_so_item.quantityToFulfill,
-                line_number=line_number,
-                parent_item_id=sales_order_item.id,
-                status_id=SalesOrderItemStatus.find_by_name(
-                    fb_so_item.statusObj.name
-                ).id,
-                type_id=SalesOrderItemType.find_by_name(
-                    fb_so_item.typeObj.name
-                ).id,
-            )
-            session.add(child_sales_order_item)
-            session.commit()
-            backend_logger.debug(f"Creating child sales order item {child_sales_order_item}.")
+            child_sales_order_item = SalesOrderItem.create(
+                        part=child_part,
+                        sales_order=sales_order,
+                        date_scheduled_fulfillment=fb_so_item.dateScheduledFulfillment,
+                        description=fb_so_item.description,
+                        fb_so_item_id=fb_so_item.id,
+                        quantity_fulfilled=fb_so_item.quantityFulfilled,
+                        quantity_ordered=fb_so_item.quantityOrdered,
+                        quantity_picked=fb_so_item.quantityPicked,
+                        quantity_to_fulfill=fb_so_item.quantityToFulfill,
+                        line_number=line_number,
+                        status=SalesOrderItemStatus.find_by_name(fb_so_item.statusObj.name),
+                        type=SalesOrderItemType.find_by_name(fb_so_item.typeObj.name),
+                        session=session
+                    )
         else:
             # Update the child sales order item.
             # TODO: Change to only update the fields that have changed.
@@ -229,7 +222,6 @@ def prosess_child_fishbowl_parts(session: session_type_hint, sales_order: SalesO
             child_sales_order_item.quantity_picked = fb_so_item.quantityPicked
             child_sales_order_item.quantity_to_fulfill = fb_so_item.quantityToFulfill
             child_sales_order_item.quantity_ordered = fb_so_item.quantityOrdered
-            session.commit()
 
 # This line restarts the black magic.
 # fmt: on

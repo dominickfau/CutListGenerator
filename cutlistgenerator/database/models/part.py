@@ -1,12 +1,14 @@
 from __future__ import annotations
 from datetime import datetime
+import logging
 from sqlalchemy import Column, String, Boolean, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm.collections import collection
 
-from cutlistgenerator.database import Auditing, Base, DeclarativeBase, global_session
+from cutlistgenerator.database import Auditing, Base, DeclarativeBase, global_session, session_type_hint
 from cutlistgenerator.settings import DEFAULT_DUE_DATE_PUSH_BACK_DAYS
 
+logger = logging.getLogger("backend")
 
 class ParentToChildPart(DeclarativeBase):
     __tablename__ = "parent_to_child_part"
@@ -21,7 +23,7 @@ class Part(Base, Auditing):
     __tablename__ = "part"
 
     description = Column(String(256), default="")
-    number = Column(String(50), unique=True, nullable=False)
+    number = Column(String(256), unique=True, nullable=False)
     excluded_from_import = Column(Boolean, default=False)
     due_date_push_back_days = Column(
         Integer,
@@ -39,11 +41,14 @@ class Part(Base, Auditing):
     # fmt: on
 
     @collection.appender
-    def add_child(self, child: Part) -> None:
+    def add_child(self, child: Part, session: session_type_hint=None) -> None:
         """Append a child part."""
-        self.children.append(child)
+        if not session: session = global_session
+
+        local_object = session.merge(child)
+        self.children.append(local_object)
         self.date_modified = datetime.now()
-        global_session.commit()
+        session.commit()
 
     @property
     def parent(self) -> Part:
@@ -59,6 +64,9 @@ class Part(Base, Auditing):
 
     def __repr__(self) -> str:
         return f"<Part {self.number}>"
+    
+    def __str__(self) -> str:
+        return self.number
 
     def set_excluded_from_import(self, excluded_from_import: bool) -> None:
         """Set the excluded_from_import flag."""
@@ -87,18 +95,29 @@ class Part(Base, Auditing):
     def find_by_id(id: int) -> Part:
         """Returns the part with the given id."""
         return global_session.query(Part).filter(Part.id == id).first()
-
+    
     @staticmethod
-    def from_fishbowl_part(fishbowl_part) -> Part:
-        """Creates a new Part from a Fishbowl Part object.
-        Or returns an existing Part if it already exists."""
-        current_part = Part.find_by_number(fishbowl_part.number)
-        if current_part:
-            return current_part
+    def create(number: str, description: str="", session: session_type_hint=None, skip_commit: bool=False) -> Part:
+        """Creates a new part.
 
-        part = Part(number=fishbowl_part.number, description=fishbowl_part.description)
-        global_session.add(part)
-        global_session.commit()
+        Args:
+            number (str): Unique number for this part.
+            description (str, optional): Description for this part. Defaults to "".
+            session (Session, optional): Session to use for this operation. Defaults to Global Session.
+
+        Returns:
+            Part: Returns the newly created part.
+        """
+        if not session: session = global_session
+
+        if Part.find_by_number(number) is not None:
+            raise Exception(f"Part number: {number} is already taken.")
+
+        part = Part(number=number, description=description)
+        session.add(part)
+        if not skip_commit:
+            session.commit()
+        logger.debug(f"Creating part {part}")
         return part
 
     @staticmethod

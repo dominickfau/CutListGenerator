@@ -32,6 +32,9 @@ class Customer(Base, Auditing):
         lazy="joined",
     )  # type: CustomerNameConversion
 
+    def __str__(self) -> str:
+        return self.name
+
     def to_dict(self) -> dict:
         result = {}
         for column in self.__table__.columns:
