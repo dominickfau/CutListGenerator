@@ -472,11 +472,9 @@ class SalesOrderItem(Base, Auditing):
             date_scheduled_fulfillment: datetime.datetime=None,
             fb_so_item_id: int=None,
             status: SalesOrderItemStatus=None,
-            type: SalesOrderItemType=None,
-            session: session_type_hint=None
+            type: SalesOrderItemType=None
         ) -> SalesOrderItem:
 
-        if not session: session = global_session
         if not date_scheduled_fulfillment: date_scheduled_fulfillment = datetime.datetime.now()
         if not status: status = SalesOrderItemStatus.find_by_name("Entered")
         if not type: type = SalesOrderItemType.find_by_name("Sale")
@@ -495,6 +493,6 @@ class SalesOrderItem(Base, Auditing):
             status_id=status.id,
             type_id=type.id,
         )
-        session.add(sales_order_item)
-        session.commit()
+        global_session.add(sales_order_item)
+        global_session.commit()
         backend_logger.debug(f"Creating sales order item {sales_order_item}.")

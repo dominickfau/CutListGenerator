@@ -40,15 +40,14 @@ class Part(Base, Auditing):
     )
     # fmt: on
 
-    @collection.appender
-    def add_child(self, child: Part, session: session_type_hint=None) -> None:
+    def add_child(self, child: Part) -> None:
         """Append a child part."""
-        if not session: session = global_session
+        if child in self.children:
+            return
 
-        local_object = session.merge(child)
-        self.children.append(local_object)
+        self.children.append(child)
         self.date_modified = datetime.now()
-        session.commit()
+        global_session.commit()
 
     @property
     def parent(self) -> Part:
@@ -97,26 +96,24 @@ class Part(Base, Auditing):
         return global_session.query(Part).filter(Part.id == id).first()
     
     @staticmethod
-    def create(number: str, description: str="", session: session_type_hint=None, skip_commit: bool=False) -> Part:
+    def create(number: str, description: str="", skip_commit: bool=False) -> Part:
         """Creates a new part.
 
         Args:
             number (str): Unique number for this part.
             description (str, optional): Description for this part. Defaults to "".
-            session (Session, optional): Session to use for this operation. Defaults to Global Session.
 
         Returns:
             Part: Returns the newly created part.
         """
-        if not session: session = global_session
 
         if Part.find_by_number(number) is not None:
             raise Exception(f"Part number: {number} is already taken.")
 
         part = Part(number=number, description=description)
-        session.add(part)
+        global_session.add(part)
         if not skip_commit:
-            session.commit()
+            global_session.commit()
         logger.debug(f"Creating part {part}")
         return part
 
