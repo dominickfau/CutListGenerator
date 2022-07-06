@@ -57,7 +57,7 @@ class Customer(Base, Auditing):
     @staticmethod
     def find_by_name(name: str) -> Customer:
         """Returns the customer with the given name."""
-        return global_session.query(Customer).filter(Customer.name == name).one()
+        return global_session.query(Customer).filter(Customer.name == name).first()
 
     @staticmethod
     def find_all() -> list[Customer]:
