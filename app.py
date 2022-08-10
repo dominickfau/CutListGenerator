@@ -27,6 +27,7 @@ from cutlistgenerator.database.models.part import Part
 from cutlistgenerator.settings import *
 from cutlistgenerator import utilities
 from cutlistgenerator.customwidgets.qtable import CustomQTableWidget
+from cutlistgenerator.customwidgets.messagebox import ResizableMessageBox
 from cutlistgenerator.ui.dialogs import (
     CustomerNameConverterDialog,
     CutJobEditorDialog,
@@ -63,6 +64,7 @@ fishbowl_orm = fishbowlorm.FishbowlORM(
 
 COLUMNS = [
     "Id",
+    "SO Item Id",
     "Due Date",
     "Cut By Date",
     "Customer",
@@ -279,6 +281,7 @@ class MainWindow(QtWidgets.QMainWindow):
         menu.addAction("Change Due Date Pushback", self.on_change_due_date_push_back_clicked)
         menu.addAction("Create New Cut Job", self.on_create_new_cut_job_clicked)
         menu.addAction("Copy", self.so_table_widget.copy_selected_rows)
+        menu.addAction("Delete", self.on_delete_so_item_clicked)
         menu.exec_(self.so_table_widget.mapToGlobal(pos))
     # This line restarts the black magic.
     # fmt: on
@@ -438,6 +441,46 @@ class MainWindow(QtWidgets.QMainWindow):
             selected_rows.append(index)
         frontend_logger.info(f"Selected rows: {selected_rows}")
         return selected_rows
+    
+    def on_delete_so_item_clicked(self):
+        selected_rows = self.get_selected_rows()
+        if not selected_rows: return
+
+        sales_order_items = [] # type: list[SalesOrderItem]
+        detailed_text = "The items below will be deleted.\n\n"
+
+        for index in selected_rows:
+            so_item_id = int(self.so_table_widget.item(index, COLUMNS.index("SO Item Id")).text())
+            sales_order_item = SalesOrderItem.find_by_id(so_item_id)
+            sales_order_items.append(sales_order_item)
+
+            detailed_text += f"SO: {sales_order_item.sales_order.number} SO Item: {sales_order_item}\n"
+
+            if sales_order_item.parent_item_id != None:
+                detailed_text += f"Parent SO: {sales_order_item.parent_item.sales_order.number} SO Item: {sales_order_item.parent_item}\n"
+                if sales_order_item.parent_item.cut_job_item_id != None:
+                    detailed_text += f"Parent Cut Job Item {sales_order_item.parent_item.cut_job_item}\n"
+            if sales_order_item.cut_job_item_id != None:
+                detailed_text += f"Cut Job Item {sales_order_item.cut_job_item}\n"
+
+        message_box = ResizableMessageBox()
+        message_box.setIcon(QMessageBox.Warning)
+        message_box.setWindowTitle("Delete SO Item")
+        message_box.setText(f"Are you sure you want to delete these items?")
+        message_box.setInformativeText("All items selected will be deleted. Any linked cut jobs and parent SO items will also be removed.")
+        message_box.setDetailedText(detailed_text)
+        message_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        message_box.exec()
+
+        if message_box.result() == QMessageBox.No:
+            return
+
+        root_logger.warning(f"Deleting {len(sales_order_items)} SO items.")
+        
+        for soitem in sales_order_items:
+            soitem.delete()
+        
+        self.reload_so_table()
 
     def on_create_new_cut_job_clicked(self):
         selected_rows = self.get_selected_rows()
@@ -633,9 +676,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         query = query.order_by(SalesOrderItem.date_scheduled_fulfillment)
 
-        results = (
-            query.all()
-        )  # type: list[tuple[SalesOrder, Customer, SalesOrderItem, Part]]
+        results = query.all()  # type: list[tuple[SalesOrder, Customer, SalesOrderItem, Part]]
 
         data = []
         index = 1
@@ -649,6 +690,7 @@ class MainWindow(QtWidgets.QMainWindow):
             data.append(
                 [
                     index_string,
+                    str(sales_order_item.id),
                     sales_order_item.date_scheduled_fulfillment.strftime(DATE_FORMAT),
                     sales_order_item.pushed_back_due_date.strftime(DATE_FORMAT),
                     customer.name_converted,

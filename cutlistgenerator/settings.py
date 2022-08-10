@@ -44,7 +44,7 @@ class DefaultSetting:
 
 COMPANY_NAME = "DF-Software"
 PROGRAM_NAME = "Cut List Generator"
-PROGRAM_VERSION = "1.0.6"
+PROGRAM_VERSION = "1.0.7"
 USER_HOME_FOLDER = os.path.expanduser("~")
 COMPANY_FOLDER = os.path.join(USER_HOME_FOLDER, "Documents", COMPANY_NAME)
 PROGRAM_FOLDER = os.path.join(COMPANY_FOLDER, PROGRAM_NAME)

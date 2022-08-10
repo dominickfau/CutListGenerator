@@ -196,6 +196,9 @@ class CutJobItem(Base, Auditing):
     total_time_minutes = Column(Integer, nullable=False, default=0)
     """The total time in minutes to cut this item."""
 
+    def __str__(self) -> str:
+        return f"Id: {self.id} Qty to Cut: {self.quantity_to_cut} Status: {self.status.name}"
+
     def to_dict(self) -> dict:
         result = {}
         for column in self.__table__.columns:
@@ -295,11 +298,13 @@ class CutJobItem(Base, Auditing):
         self.date_modified = datetime.datetime.now()
         global_session.commit()
 
-    def delete(self):
+    def delete(self) -> RemovedCutJobItem:
         """Deletes the CutJobItem from the database."""
+        removed_item = RemovedCutJobItem.create_from_cut_job_item(self)
         if self.id:
             global_session.delete(self)
         global_session.commit()
+        return removed_item
 
 
 class PartCutHistory(Base):
@@ -359,3 +364,32 @@ class PartCutHistory(Base):
         if not part:
             return None
         return PartCutHistory.find_by_part(part)
+
+
+class RemovedCutJobItem(Base):
+    """Represents a part needing to be cut."""
+
+    __tablename__ = "removed_cut_job_item"
+
+    cut_job_id = Column(Integer)
+    date_finished = Column(DateTime)
+    part_id = Column(Integer)
+    quantity_cut = Column(Integer)
+    quantity_to_cut = Column(Integer)
+    status_id = Column(Integer)
+    total_time_minutes = Column(Integer)
+
+    @staticmethod
+    def create_from_cut_job_item(item: CutJobItem) -> RemovedCutJobItem:
+        item = RemovedCutJobItem(
+            cut_job_id = item.cut_job_id,
+            date_finished = item.date_finished,
+            part_id = item.part_id,
+            quantity_cut = item.quantity_cut,
+            quantity_to_cut = item.quantity_to_cut,
+            status_id = item.status_id,
+            total_time_minutes = item.total_time_minutes
+        )
+        global_session.add(item)
+        global_session.commit()
+        return item

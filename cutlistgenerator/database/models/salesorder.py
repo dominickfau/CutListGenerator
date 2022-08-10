@@ -311,7 +311,7 @@ class SalesOrderItem(Base, Auditing):
     )  # type: SalesOrderItemType
 
     def __str__(self) -> str:
-        return f"{self.id}-{self.line_number}: {self.part.number}"
+        return f"Id: {self.id} Line: {self.line_number} Part: {self.part.number}"
 
     def to_dict(self) -> dict:
         result = {}
@@ -384,6 +384,31 @@ class SalesOrderItem(Base, Auditing):
         self.cut_job_item_id = None
         self.date_modified = datetime.datetime.now()
         global_session.commit()
+    
+    def delete(self) -> None:
+        """Deletes the item from DB."""
+        removed_so_item = RemovedSalesOrderItem.create_from_so_item(self)
+        removed_cut_job_item = None
+        try:
+            if self.parent_item:
+                backend_logger.info(f"Deleting parent SO item {self.parent_item}")
+                self.parent_item.delete()
+
+            if self.cut_job_item:
+                backend_logger.info(f"Deleting Cut Job Item {self.cut_job_item}")
+                cut_job_item = self.cut_job_item
+                self.cut_job_item_id = None
+                global_session.commit()
+                removed_cut_job_item = cut_job_item.delete()
+            backend_logger.info(f"Deleting So Item {self}")
+            global_session.delete(self)
+            global_session.commit()
+        except Exception as e:
+            global_session.delete(removed_so_item)
+            if removed_cut_job_item:
+                global_session.delete(removed_cut_job_item)
+            global_session.commit()
+            raise e
 
     @staticmethod
     def find_by_fishbowl_sales_order_item_id(
@@ -413,6 +438,10 @@ class SalesOrderItem(Base, Auditing):
             )
             .first()
         )
+    
+    @staticmethod
+    def find_by_id(item_id: int) -> SalesOrderItem:
+        return global_session.query(SalesOrderItem).filter(SalesOrderItem.id == item_id).first()
 
     @staticmethod
     def find_by_so_number_line_number(
@@ -496,3 +525,47 @@ class SalesOrderItem(Base, Auditing):
         global_session.add(sales_order_item)
         global_session.commit()
         backend_logger.debug(f"Creating sales order item {sales_order_item}.")
+
+
+class RemovedSalesOrderItem(Base):
+    __tablename__ = "removed_sales_order_item"
+
+    cut_job_item_id = Column(Integer)
+    date_scheduled_fulfillment = Column(DateTime)
+    description = Column(String(255))
+    fb_so_item_id = Column(Integer)
+    is_cut = Column(Boolean, default=False)
+    line_number = Column(String(100))
+    parent_item_id = Column(Integer)
+    part_id = Column(Integer, ForeignKey("part.id"))
+    quantity_fulfilled = Column(Float)
+    quantity_ordered = Column(Float)
+    quantity_picked = Column(Float)
+    quantity_to_fulfill = Column(Float)
+    sales_order_id = Column(Integer)
+    status_id = Column(Integer)
+    type_id = Column(Integer)
+
+    @staticmethod
+    def create_from_so_item(soitem: SalesOrderItem) -> RemovedSalesOrderItem:
+        item = RemovedSalesOrderItem(
+            cut_job_item_id = soitem.cut_job_item_id,
+            date_scheduled_fulfillment = soitem.date_scheduled_fulfillment,
+            description = soitem.description,
+            fb_so_item_id = soitem.fb_so_item_id,
+            is_cut = soitem.is_cut,
+            line_number = soitem.line_number,
+            parent_item_id = soitem.parent_item_id,
+            part_id = soitem.part_id,
+            quantity_fulfilled = soitem.quantity_fulfilled,
+            quantity_ordered = soitem.quantity_ordered,
+            quantity_picked = soitem.quantity_picked,
+            quantity_to_fulfill = soitem.quantity_to_fulfill,
+            sales_order_id = soitem.sales_order_id,
+            status_id = soitem.status_id,
+            type_id = soitem.type_id
+        )
+
+        global_session.add(item)
+        global_session.commit()
+        return item
