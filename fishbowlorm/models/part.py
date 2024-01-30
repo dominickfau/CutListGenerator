@@ -73,7 +73,6 @@ class FBPart(Base):
     inventoryAccountId = Column(Integer)
     lastChangedUser = Column(String(255))
     leadTime = Column(Integer)
-    leadTimeToFulfill = Column(Integer)
     len = Column(DECIMAL(28, 9))
     num = Column(String(255))
     partClassId = Column(Integer)

@@ -7,3 +7,4 @@ pymysql
 auto-py-to-exe
 waitress
 requests
+cryptography

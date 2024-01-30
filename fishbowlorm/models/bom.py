@@ -23,7 +23,6 @@ class FBBom(Base):
     __tablename__ = 'bom'
     __table_args__ = (
         Index('ix_bom_autoCreateTypeId', 'autoCreateTypeId'),
-        Index('ix_bom_typeId', 'typeId'),
         Index('ix_bom_userId', 'userId')
     )
     
@@ -42,7 +41,6 @@ class FBBom(Base):
     pickFromLocation = Column(Boolean)
     revision = Column(String(30))
     statisticsDateRange = Column(String(40))
-    typeId = Column(Integer, ForeignKey('customlistitem.id'))
     url = Column(String(255))
     userId = Column(Integer, ForeignKey('sysuser.id'))
 
@@ -87,8 +85,6 @@ class FBBomItem(Base):
     bomItemGroupId = Column(Integer, ForeignKey('bomitemgroup.id'))
     description = Column(String(255))
     groupDefault = Column(Boolean)
-    instructionNote = Column(String(255))
-    instructionUrl = Column(String(255))
     maxQty = Column(DECIMAL(28, 9))
     minQty = Column(DECIMAL(28, 9))
     oneTimeItem = Column(Boolean)
@@ -96,8 +92,6 @@ class FBBomItem(Base):
     partObj = relationship('FBPart', foreign_keys=[partId]) # type: FBPart
     priceAdjustment = Column(DECIMAL(28, 9))
     quantity = Column(DECIMAL(28, 9))
-    sortIdConfig = Column(Integer)
-    sortIdInstruct = Column(Integer)
     stage = Column(String(255))
     stageBomId = Column(Integer, ForeignKey('bom.id'))
     stageBomObj = relationship('FBBom', backref='bomItemStageBom', foreign_keys=[stageBomId]) # type: FBBom
